@@ -29,7 +29,7 @@ const employeeSchema = new mongoose.Schema(
     },
     auth: {
       type: Number,
-      default: 0, //0 emp 1 admin
+      default: 0, //0 emp 1 admin 2hr 3manager
     },
 
     // employee details
