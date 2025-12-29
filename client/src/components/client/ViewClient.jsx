@@ -31,6 +31,7 @@ import { motion } from "framer-motion";
 import { FaFaceFrownOpen } from "react-icons/fa6";
 import { BiSolidHappyHeartEyes } from "react-icons/bi";
 import { FaFaceSadTear } from "react-icons/fa6";
+import SelectManager from "./SelectManager";
 
 const GlobalStyles = createGlobalStyle`
 .MuiPaper-root{
@@ -137,6 +138,7 @@ const ViewClient = () => {
     projectname: "",
     assignto: [],
     description: "", // default assignee
+    managerId: "",
   });
   const [activeEmployees, setActiveEmployees] = useState([]);
 
@@ -326,7 +328,23 @@ const ViewClient = () => {
     setProjectForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const addProject = async () => {
+  const addProject = async (e) => {
+    e.preventDefault();
+     // ensure manager chosen
+    if (!projectForm.managerId) {
+      setError("Please select a manager for the project.");
+      setTimeout(() => setError(null), 3500);
+      return;
+    }
+    //console.log("Before process Adding project with data:", { ...projectForm, clientid: selectedclientid });
+    // Check if managerId is present in assignTo. If not, add it else proceed.
+    if (!projectForm.assignto.includes(projectForm.managerId)) {
+      setProjectForm((prev) => ({
+        ...prev,
+        assignto: [...prev.assignto, prev.managerId],
+      }));
+    }
+    //console.log("After process Adding project with data:", { ...projectForm, clientid: selectedclientid });
     try {
       const response = await fetch(
         `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.addProject}`,
@@ -1010,6 +1028,12 @@ const ViewClient = () => {
 
             <AssignToSelect
               activeEmployees={activeEmployees}
+              projectForm={projectForm}
+              setProjectForm={setProjectForm}
+            />
+
+            <SelectManager
+              options={activeEmployees}
               projectForm={projectForm}
               setProjectForm={setProjectForm}
             />

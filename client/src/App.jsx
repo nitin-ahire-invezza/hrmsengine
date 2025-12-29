@@ -32,6 +32,7 @@ import UserLeave from "./components/userleave/UserLeave";
 import AttendanceHistory from "./components/dashboard/AttendanceHistory";
 import Settings from "./components/admin/settings/Settings";
 import LogViewer from "./components/admin/settings/LogViewer";
+import TeamList from "./components/pim/TeamList";
 
 function App() {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
@@ -132,6 +133,11 @@ function App() {
       return (
         <>
           <Route index element={<Dashboard />} />
+          <Route
+            path="/pim/employee-details/:_id"
+            element={<EmployeeDetails />}
+          />
+          <Route path="/viewteam" element={<TeamList />} />
           <Route path="/clients" element={<Clients />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/clients/viewclient" element={<ViewClient />} />

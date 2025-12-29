@@ -31,6 +31,7 @@ import {
   TbLayoutAlignLeftFilled,
   TbLayoutAlignRightFilled,
 } from "react-icons/tb";
+import SelectManager from "../client/SelectManager";
 
 const GlobalStyles = createGlobalStyle`
 .MuiPaper-root{
@@ -125,11 +126,13 @@ const ViewProject = () => {
     deadline: "",
     status: 0,
     assignto: [],
+    managerId: "",
   });
   const [projectForm, setProjectForm] = useState({
     projectname: "",
     assignto: [],
     description: "", // default assignee
+    managerId: "",
   });
   const [activeEmployees, setActiveEmployees] = useState([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -169,6 +172,7 @@ const ViewProject = () => {
           assignto: Array.isArray(data.data.assignto)
             ? data.data.assignto.map((assignee) => assignee._id) // Extracts an array of `_id`s
             : [], // Default to an empty array if undefined
+          managerId: data.data.managerId || "",
         });
       } else {
         console.error("Error fetching project:", data.msg);
@@ -182,7 +186,26 @@ const ViewProject = () => {
     fetchProject();
   }, [projectId, token]);
 
-  const handleUpdateProject = async () => {
+  const handleUpdateProject = async (e) => {
+    e.preventDefault();
+
+  if (!formData.managerId) {
+    setErrorMessage("Please select a manager");
+    return;
+  }
+  setErrorMessage("");
+
+  const managerId = String(formData.managerId);               
+  const assigntoAsStrings = formData.assignto.map(String);
+  const alreadyAssigned = assigntoAsStrings.includes(managerId);
+
+  const newAssignto = alreadyAssigned
+    ? formData.assignto
+    : [...formData.assignto, managerId];
+
+ 
+  const payload = { ...formData, assignto: newAssignto, managerId, id: projectId };
+  setFormData(prev => ({ ...prev, assignto: newAssignto }));
     try {
       const response = await fetch(
         `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.updateproject}`,
@@ -192,14 +215,14 @@ const ViewProject = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ...formData, id: projectId }),
+          body: JSON.stringify(payload),
         }
       );
       const data = await response.json();
       if (response.ok) {
-        // console.log("Project updated successfully:", data);
+        const updatedProject = data?.project ?? payload;
+        setProject(prev => ({ ...(prev || {}), ...updatedProject }));
         setDrawerOpen(false);
-        setProject({ ...project, ...formData });
         fetchProject();
       } else {
         console.error("Error updating project:", data.msg);
@@ -601,6 +624,12 @@ const ViewProject = () => {
                 onChange={(selected) =>
                   setFormData({ ...formData, assignto: selected })
                 }
+              />
+              <span>Manager</span>
+              <SelectManager
+                options={activeEmployees}
+                projectForm={formData}
+                setProjectForm={setFormData}
               />
 
               <TextField

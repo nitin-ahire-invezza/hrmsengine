@@ -192,4 +192,7 @@ router.post(
   userController.viewProfilePic
 );
 
+// Route for viewing teams
+router.get("/viewteam", auth, userController.viewTeam);
+
 module.exports = router;

@@ -160,6 +160,7 @@ exports.addProjectValidator = [
     "description",
     "Description should not exceed 1000 characters"
   ).isLength({ max: 1000 }),
+  check('managerId', 'managerId is required').not().isEmpty(),
 ];
 exports.updateProjectValidator = [
   check("id", "Id is required to update project details").not().isEmpty(),
@@ -168,6 +169,7 @@ exports.updateProjectValidator = [
     "description",
     "Description should not exceed 1000 characters"
   ).isLength({ max: 1000 }),
+  check('managerId', 'managerId is required').not().isEmpty(),
 ];
 
 exports.deleteUserValidator = [check("id", "id is required").not().isEmpty()];

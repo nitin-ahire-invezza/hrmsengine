@@ -1,7 +1,8 @@
 {
-    "baseUrl": "https://hrmsapi.invezzatech.com/",
+    "baseUrl": "http://localhost:4000/",
     "baseUr": "http://localhost:4000/",
     "endpoints": {
+        "viewteam": "api/viewteam",
         "registeruser": "api/createuser",
         "forgotpassword": "api/forgotpassword",
         "login": "api/login",

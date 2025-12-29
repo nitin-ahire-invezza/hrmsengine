@@ -37,6 +37,11 @@ const projectSchema = new mongoose.Schema(
         ref: "Employee",
       }
     ],
+    managerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee",
+      required: true, 
+    },
   },
   {
     timestamps: true,

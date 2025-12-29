@@ -23,6 +23,7 @@ const addProject = async (req, res) => {
       deadline,
       status,
       assignto,
+      managerId
     } = req.body;
 
     const isExist = await Project.findOne({ projectname });
@@ -43,6 +44,7 @@ const addProject = async (req, res) => {
       deadline,
       status,
       assignto: Array.isArray(assignto) ? assignto : [assignto],
+      managerId
     });
 
     const projectData = await newProjectData.save();
@@ -82,6 +84,7 @@ const updateProject = async (req, res) => {
       deadline,
       status,
       assignto,
+      managerId,
     } = req.body;
 
     const isExist = await Project.findOne({ _id: id });
@@ -105,6 +108,7 @@ const updateProject = async (req, res) => {
           deadline,
           status,
           assignto: Array.isArray(assignto) ? assignto : [assignto],
+          managerId,
         },
       },
       { new: true }

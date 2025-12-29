@@ -5,6 +5,7 @@ const { sendLog } = require('../controllers/admin/settingController');
 
 const Upload = require("../helpers/upload");
 const Employeeprofile = require("../model/employeeProfile");
+const Project = require("../model/projectModel");
 
 const PasswordReset = require("../model/passwordReset");
 
@@ -777,6 +778,76 @@ const viewProfilePic = async (req, res) => {
   }
 };
 
+// http://localhost:3000/api/viewteam
+const viewTeam = async (req, res) => {
+  try {
+    // Get manager ID from authenticated user
+    let managerId = req.employee?._id ?? null;
+    
+    // Return empty data if managerId not found
+    if (!managerId) {
+      return res.status(400).json({ success: false, msg: "Manager ID not found", data: [] });
+    }
+
+    // Get all projects where managerId matches
+    const projects = await Project.find({ managerId }).select('assignto').lean();
+    
+
+    // If no projects found for the given managerId then return empty data
+    if (!projects || projects.length === 0) {
+      return res.status(200).json({ success: true, msg: "No projects found for manager", data: [] });
+    }
+
+    // Collect all assignTo ids from projects
+    const allAssignIds = projects.reduce((acc, p) => {
+      if (Array.isArray(p.assignto)) acc.push(...p.assignto.map(id => id?.toString()));
+      return acc;
+    }, []);
+
+    // Removing managerId from the assignTo ids
+    const uniqueAssignIds = Array.from(new Set(allAssignIds)).filter(id => id !== managerId.toString());
+
+    // If no team members found after removing managerId
+    if (uniqueAssignIds.length === 0) {
+      return res.status(200).json({ success: true, msg: "No team members found", data: [] });
+    }
+
+    // Fetch all employees data
+    const employees = await Employee.find({ _id: { $in: uniqueAssignIds } }).lean();
+
+
+    const profiles = await Employeeprofile.find({ employee_id: { $in: uniqueAssignIds } }).lean();
+
+    // Constructing a map of employee_id to profile for quick lookup
+    const profileMap = profiles.reduce((m, p) => {
+      const key = p.employee_id?.toString?.() ?? p.employee_id;
+      if (key) m[key] = p;
+      return m;
+    }, {});
+
+    // Merging the profile URLs into employee data
+    const result = employees.map(emp => {
+      const idStr = emp._id.toString();
+      const p = profileMap[idStr];
+      return {
+        ...emp,
+        profileUrl: p ? p.profileUrl : null,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      msg: "Employees Fetched successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      msg: error.message,
+    });
+  }
+}
+
 module.exports = {
   createUser,
   forgotPassword,
@@ -791,4 +862,5 @@ module.exports = {
   updateProfile,
   viewProfilePic,
   employeedetails,
+  viewTeam
 };
