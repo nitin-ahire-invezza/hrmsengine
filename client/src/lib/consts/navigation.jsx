@@ -33,13 +33,6 @@ export const DASHBOARD_SIDEBAR_LINKS = [
         icon: <FaAddressBook />,
         allowedAuth: [1, 2], // only admin can access
       },
-      // {
-      //   key: "employee",
-      //   label: "Add Employee",
-      //   path: "/pim/addemployee",
-      //   icon: <IoPersonAdd />,
-      //   allowedAuth: [1], // only admin can access
-      // },
       {
         key: "leave",
         label: "Add Holidays",
@@ -55,6 +48,13 @@ export const DASHBOARD_SIDEBAR_LINKS = [
     path: "/timesheet",
     icon: <FaBusinessTime />,
     allowedAuth: [0, 3], // user only
+  },
+  {
+        key: "teamList",
+        label: "View Team",
+        path: "/viewteam",
+        icon: <FaAddressBook />,
+        allowedAuth: [3], // only manager can access
   },
   {
     key: "Attendance",
