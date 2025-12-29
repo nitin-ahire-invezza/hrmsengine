@@ -1,0 +1,23 @@
+# --- Core numeric (CRITICAL PIN) ---
+numpy<2.0
+
+# --- API ---
+fastapi==0.110.0
+uvicorn==0.29.0
+pydantic==2.6.4
+
+# --- LangChain ---
+langchain==0.1.16
+langchain-community==0.0.38
+
+# --- Vector DB ---
+chromadb==0.4.24
+
+# --- Embeddings ---
+sentence-transformers>=2.6.0
+
+# --- Ollama client ---
+ollama==0.1.8
+
+# --- PDF ingestion ---
+pypdf
