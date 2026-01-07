@@ -179,7 +179,8 @@ const Login = ({ theme }) => {
   const [showOtpPopup, setShowOtpPopup] = useState(false);
   const [timer, setTimer] = useState(179);
   const navigate = useNavigate();
-  const { setUserData, setTokenType } = useContext(AuthContext);
+  //const { setUserData, setTokenType } = useContext(AuthContext);
+  const { login, setTokenType } = useContext(AuthContext); // Subscribing to the AuthContext
   const inputRefs = useRef([]);
 
   useEffect(() => {
@@ -280,10 +281,10 @@ const Login = ({ theme }) => {
       if (response.data.success) {
         setMessage("Code verified Succesfully");
         setTimeout(() => setMessage(null), 2000);
-        localStorage.setItem("accessToken", response.data.accessToken);
-        secureLocalStorage.setItem("userData", JSON.stringify(data)); // Store user data in sessionStorage
-        setUserData(data);
-        setTokenType(response.data.tokenType); // Set tokenType in context
+        const accessToken = response.data.accessToken;
+        const data = response.data.data; // existing user payload from backend
+        login(accessToken, data, response.data.tokenType);
+        if (response.data.tokenType) setTokenType(response.data.tokenType);
         setTimeout(() => navigate("/"), 2000);
       } else {
         setError(data.msg || "Invalid OTP. Please try again.");

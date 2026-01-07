@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import Layout from "./components/shared/Layout";
 import Dashboard from "./components/Dashboard";
 import AdminDashboard from "./components/AdminDashboard";
@@ -25,6 +25,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthContext } from "../src/contexts/AuthContext";
 import NotFound from "./NotFound";
 import Timesheet from "./components/timesheet/TimeSheet";
+import ChatBox from "./components/shared/ChatBox";
 
 //userprofile
 import UserProfile from "../src/components/userprofile/UserProfile";
@@ -36,7 +37,8 @@ import TeamList from "./components/pim/TeamList";
 
 function App() {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
-  const { userData } = useContext(AuthContext);
+  const { userData, checkAndLogoutIfExpired } = useContext(AuthContext);
+  const location = useLocation(); 
 
   useEffect(() => {
     if (theme === "dark") {
@@ -46,6 +48,13 @@ function App() {
     }
     localStorage.setItem("theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    // Runs on every route change
+    checkAndLogoutIfExpired();
+    // scroll to top on navigation
+    window.scrollTo(0, 0);
+  }, [location.pathname, checkAndLogoutIfExpired]);
 
   const handleThemeSwitch = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -104,6 +113,7 @@ function App() {
             element={<ViewProject />}
           />
           <Route path="/Attendance" element={<AttendanceHistory />} />
+          <Route path="/chat" element={<ChatBox theme={theme}/>} />
         </>
       );
     } else if (userData?.employeeData?.auth === 2) {
@@ -126,6 +136,7 @@ function App() {
           <Route path="/myprofile" element={<UserProfile />} />
           <Route path="/leave" element={<UserLeave />} />
           <Route path="/Attendance" element={<AttendanceHistory />} />
+          <Route path="/chat" element={<ChatBox theme={theme}/>} />
         </>
       );
     } else if (userData?.employeeData?.auth === 3) {
@@ -151,6 +162,7 @@ function App() {
           <Route path="/timesheet" element={<Timesheet />} />
           <Route path="/leave" element={<UserLeave />} />
           <Route path="/Attendance" element={<AttendanceHistory />} />
+          <Route path="/chat" element={<ChatBox theme={theme}/>} />
         </>
       );
     } else {
@@ -162,6 +174,7 @@ function App() {
           <Route path="/timesheet" element={<Timesheet />} />
           <Route path="/leave" element={<UserLeave />} />
           <Route path="/Attendance" element={<AttendanceHistory />} />
+          <Route path="/chat" element={<ChatBox theme={theme}/>} />
           {/* <Route path="*" element={<NotFound />} /> */}
         </>
       );
@@ -169,7 +182,6 @@ function App() {
   };
 
   return (
-    <Router>
       <Routes>
         <Route path="*" element={<NotFound theme={theme} />} />
         <Route path="/login" element={<Login theme={theme} />} />
@@ -191,7 +203,6 @@ function App() {
           {renderRoutes()}
         </Route>
       </Routes>
-    </Router>
   );
 }
 

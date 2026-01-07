@@ -5,7 +5,7 @@ import { FaCalendarCheck, FaCalendarDays } from "react-icons/fa6";
 import { RiServiceFill } from "react-icons/ri";
 import { HiMiniCodeBracketSquare } from "react-icons/hi2";
 import { RiShieldUserFill } from "react-icons/ri";
-import { RiSettings2Fill } from "react-icons/ri";
+import { RiSettings2Fill, RiChat3Line } from "react-icons/ri";
 import { BsPeopleFill } from "react-icons/bs";
 import { FaBusinessTime } from "react-icons/fa6";
 import { TbLayoutDashboardFilled } from "react-icons/tb";
@@ -98,6 +98,13 @@ export const DASHBOARD_SIDEBAR_LINKS = [
     icon: <RiSettings2Fill />,
     allowedAuth: [1, 2], // only admin can access
   },
+  {
+    key: "chat",
+    label: "Chat",
+    path: "/chat",
+    icon: <RiChat3Line />,
+    allowedAuth: [0, 1, 2, 3], // all users can access
+  }
 ];
 
 export const DASHBOARD_SIDEBAR_BOTTOM_LINKS = [

@@ -539,7 +539,9 @@ const AdminInfo = () => {
               ) : (
                 <div className="col-span-8">
                   <h3 className="px-2 py-1 font-semibold">
-                    {new Date(employee.dob).toLocaleDateString("en-GB")}
+                    {employee.dob
+                     ? new Date(employee.dob).toLocaleDateString("en-GB")
+                     : ""}
                   </h3>
                 </div>
               )}
