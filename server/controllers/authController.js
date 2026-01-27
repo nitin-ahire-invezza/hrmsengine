@@ -504,6 +504,11 @@ const jwt = require("jsonwebtoken");
 
 const { sendMail } = require("../helpers/mailer");
 
+/**
+ * Generates a JWT access token
+ * @param {Object} employee 
+ * @returns {string} JWT access token
+ */
 const generateAccessToken = (employee) => {
   const token = jwt.sign(employee, process.env.ACCESS_TOKEN, {
     expiresIn: "10h",

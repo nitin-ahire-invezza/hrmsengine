@@ -157,6 +157,7 @@ export default function TimeSheet({ record, index }) {
         setLoading(false);
         const data = await response.json();
         if (data.success) {
+          console.log("Dates from API: ", data);
           const parsedDates = data.dates.map((dateStr) =>
             new Date(dateStr).toDateString()
           );
@@ -200,8 +201,9 @@ export default function TimeSheet({ record, index }) {
       const Allattendance = data.attendance;
 
       if (response.ok) {
+        // FIXME - Note that here absent dates are actually present dates (Variable name change needed)
         const allabsentdays = Allattendance.filter(
-          (attendance) => attendance.attendancestatus === 1
+          (attendance) => (attendance.attendancestatus === 1 || attendance.attendancestatus === 2)
         );
         const absentDatesArray = allabsentdays.map((absent) => absent.date);
         setAbsentdates(absentDatesArray);
@@ -316,6 +318,7 @@ export default function TimeSheet({ record, index }) {
         setLoading(false);
         const data = await response.json();
         if (data.success) {
+          console.log("Timesheet data:", data);
           setTimesheetData(data.data);
           setError(null);
         } else {
@@ -900,16 +903,23 @@ export default function TimeSheet({ record, index }) {
                     <div key={index} />
                   ))}
                   {Array.from({ length: daysInMonth }).map((_, day) => {
-                    const isAbsent = absentdates.includes(
-                      new Date(currentYear, currentMonth, day + 2)
-                        .toISOString()
-                        .split("T")[0]
-                    );
+                    const dateISO = new Date(currentYear, currentMonth, day + 2)
+                                    .toISOString()
+                                    .split("T")[0];
+
+                    
+                    const isPresent = absentdates.includes(dateISO);
+
+                    console.log({
+                      day: day + 1,
+                      dateISO,
+                      isPresent,
+                    });
 
                     return (
                       <div
                         key={day}
-                        onClick={!isAbsent ? null : () => handleDateClick(day)}
+                        onClick={!isPresent ? null : () => handleDateClick(day)}
                         className={classNames(
                           "p-2 cursor-pointer rounded-md hover:bg-sky-50 dark:hover:bg-neutral-800",
                           {
@@ -924,11 +934,11 @@ export default function TimeSheet({ record, index }) {
                                 new Date(
                                   currentYear,
                                   currentMonth,
-                                  day + 1
+                                  day + 1,
                                 ).toDateString()
                               ),
                             " bg-none text-neutral-400 dark:text-neutral-700 cursor-not-allowed":
-                              !isAbsent,
+                              !isPresent,
                           }
                         )}
                       >

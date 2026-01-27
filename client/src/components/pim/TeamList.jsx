@@ -167,7 +167,6 @@ const TeamList = () => {
   ).length;
 
   const handleViewClick = (employeeId) => {
-    console.log("Show employee: ", employeeId);
     navigate(`/pim/employee-details/${employeeId}`); // Navigate to employee details page
   };
 
@@ -229,7 +228,6 @@ const TeamList = () => {
     };
   }, [showPopup]); // Re-run the effect only when showPopup changes
 
-  console.log(userData.employeeData.empid);
 
   return (
     <div className="dark:text-white pb-32 h-full">

@@ -1,14 +1,17 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Menu } from "@headlessui/react";
 import { FaPowerOff } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import Cookies from "js-cookie";
+import { AuthContext } from "../../contexts/AuthContext"; 
 
 // import classNames from "classnames";
 
 const LogoutMenuItem = ({ handleThemeSwitch }) => {
   const navigate = useNavigate();
   const [showConfirmation, setShowConfirmation] = useState(false);
+  // Access logout function from AuthContext to sign the user out
+  const { logout } = useContext(AuthContext);
   // const { logout } = useAuth0();
 
   const handleLogout = () => {
@@ -20,14 +23,7 @@ const LogoutMenuItem = ({ handleThemeSwitch }) => {
   };
 
   const confirmlogout = () => {
-    Cookies.remove("userData");
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("@secure.s.userData");
-    sessionStorage.removeItem("inLocation");
-    sessionStorage.removeItem("outLocation");
-
-    navigate("/login");
-    window.location.reload();
+    logout();
   };
 
   return (

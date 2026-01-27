@@ -470,7 +470,9 @@ const AttendanceHistory = () => {
                         {/* Serial number */}
                         <div className="col-span-2">{record.date}</div>
                         <div className="col-span-2">
-                          {new Date(record.intime).toLocaleTimeString()}
+                          {record.intime
+                           ? new Date(record.intime).toLocaleTimeString()
+                           : "00:00:00" }
                         </div>
                         <div className="col-span-2">
                           {record.outtime

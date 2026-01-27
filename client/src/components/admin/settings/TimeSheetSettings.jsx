@@ -123,7 +123,10 @@ const Settings = () => {
       <div className="flex flex-col  gap-2">
         <p className="text-sm text-gray-500 dark:text-gray-300">
           <strong>Last Updated At:</strong>{" "}
-          {new Date(timesheetLimit.updatedAt).toLocaleString()}
+          { timesheetLimit.updatedAt 
+            ? new Date(timesheetLimit.updatedAt).toLocaleString()
+            : ""
+          }
         </p>
         {/* Update form */}
         <form

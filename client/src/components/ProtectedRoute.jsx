@@ -1,17 +1,14 @@
 // components/ProtectedRoute.js
 
-import React from "react";
+import React, { useContext } from "react";
 import { Navigate } from "react-router-dom";
+import { AuthContext } from "../contexts/AuthContext";
 
 const ProtectedRoute = ({ element: Component, ...rest }) => {
-  const accessToken = localStorage.getItem("accessToken");
+  // Subscribing to AuthContext and redirect if user is not logged in
+  const { isLoggedIn } = useContext(AuthContext);
 
-  if (!accessToken) {
-    return <Navigate to="/login" />;
-  }
-
-  // Optionally: verify the token with the server here
-  // If invalid, clear the token and redirect to login
+  if (!isLoggedIn) return <Navigate to="/login" />;
 
   return <Component {...rest} />;
 };

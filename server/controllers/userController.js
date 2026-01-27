@@ -39,7 +39,7 @@ const createUser = async (req, res) => {
     }
 
     const rowpassword = randomstring.generate(10);
-    // const rowpassword = "Tomhardy@12";
+
     const hashPassword = await bcrypt.hash(rowpassword, 12);
 
     var obj = {

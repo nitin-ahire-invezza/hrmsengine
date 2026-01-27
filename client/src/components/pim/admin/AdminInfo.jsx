@@ -21,6 +21,7 @@ const AdminInfo = () => {
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [errorCustom, setErrorCustom] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [formData, setFormData] = useState({});
   const [customTech, setCustomTech] = useState("");
@@ -150,10 +151,20 @@ const AdminInfo = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [name]: value }));
+    if (name === "dateofjoining" && value) {
+      setErrorCustom(null);
+    }
   };
 
   const handleUpdate = async () => {
     try {
+    if (!formData.dateofjoining) {
+      setErrorCustom("*Required");
+      return; 
+    }
+
+    // clear any previous error
+    setErrorCustom(null);
       // Construct the payload with individual fields
       const payload = {
         _id: formData._id,
@@ -539,7 +550,9 @@ const AdminInfo = () => {
               ) : (
                 <div className="col-span-8">
                   <h3 className="px-2 py-1 font-semibold">
-                    {new Date(employee.dob).toLocaleDateString("en-GB")}
+                    {employee.dob
+                     ? new Date(employee.dob).toLocaleDateString("en-GB")
+                     : ""}
                   </h3>
                 </div>
               )}
@@ -712,20 +725,25 @@ const AdminInfo = () => {
                 </div>
               )}
             </div>
-
+            
             <div className="grid grid-cols-12 items-center gap-2 col-span-12 md:col-span-6 justify-between">
               <label className=" col-span-4 ">Date of Joining</label>
               {editMode ? (
-                <div className="col-span-8">
-                  <input
-                    type="date"
-                    name="dateofjoining"
-                    value={formData.dateofjoining || ""}
-                    onChange={handleInputChange}
-                    className="bg-sky-100 w-full px-2 py-1 border  dark:bg-neutral-800 rounded-md"
-                  />
-                </div>
-              ) : (
+                  <div className="col-span-8">
+                    <input
+                      type="date"
+                      name="dateofjoining"
+                      value={formData.dateofjoining || ""}
+                      onChange={handleInputChange}
+                      className={`bg-sky-100 w-full px-2 py-1 border dark:bg-neutral-800 rounded-md ${
+                        !formData.dateofjoining && error ? "border-red-500" : ""
+                      }`}
+                    />
+                    {errorCustom && !formData.dateofjoining && (
+                      <p className="text-red-500 text-sm mt-1">{errorCustom}</p>
+                    )}
+                  </div>
+                ) : (
                 <div className="col-span-8">
                   <h3 className="px-2 py-1 font-semibold">
                     {employee.dateofjoining}
@@ -735,7 +753,7 @@ const AdminInfo = () => {
             </div>
 
             <div className="grid grid-cols-12 items-center gap-2 col-span-12 md:col-span-6 justify-between">
-              <label className=" col-span-4 ">Last Working datesa</label>
+              <label className=" col-span-4 ">Last Working date</label>
               {editMode ? (
                 <div className="col-span-8">
                   {employee.lastwd ? (

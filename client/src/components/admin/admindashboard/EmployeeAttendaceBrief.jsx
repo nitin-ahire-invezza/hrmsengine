@@ -51,9 +51,7 @@ const EmployeeAttendanceBrief = () => {
   const [inactiveEmployeeCount, setInactiveEmployeeCount] = useState(0); // Store count of inactive employees
   const [totalEmployeeCount, setTotalEmployeeCount] = useState(0);
 
-  // Fetch attendance data based on the selected date
-  useEffect(() => {
-    const fetchEmployeeAttendanceByDate = async () => {
+  const fetchEmployeeAttendanceByDate = async (date) => {
       try {
         const response = await fetch(
           `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.getAttendanceRecordsbyDate}`,
@@ -64,7 +62,7 @@ const EmployeeAttendanceBrief = () => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              date: selectedDate, // Use selected date
+              date 
             }),
           }
         );
@@ -101,8 +99,9 @@ const EmployeeAttendanceBrief = () => {
         );
       }
     };
-
-    fetchEmployeeAttendanceByDate();
+  // Fetch attendance data based on the selected date
+  useEffect(() => {
+    fetchEmployeeAttendanceByDate(selectedDate);
   }, [token, selectedDate]);
 
   // Fetch employee list and count active employees (status 1) and inactive employees (status other than 1)
@@ -121,7 +120,7 @@ const EmployeeAttendanceBrief = () => {
         );
 
         const data = await response.json();
-        // console.log(data);
+        console.log("Employees list:",data);
 
         if (response.ok) {
           setEmployeeList(data.data);
@@ -173,7 +172,10 @@ const EmployeeAttendanceBrief = () => {
   const isToday = selectedDate === formatDate(new Date());
 
   const ResetFiletr = () => {
-    setSelectedDate(formatDate(new Date()));
+    const today = formatDate(new Date());
+    setSelectedDate(today);
+    // Explicit fetch for today
+    fetchEmployeeAttendanceByDate(today);
   };
 
   return (

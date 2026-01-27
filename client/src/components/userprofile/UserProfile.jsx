@@ -217,7 +217,7 @@ const UserProfile = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+    
     try {
       const {
         id,
@@ -654,7 +654,9 @@ const UserProfile = () => {
                   />
                 ) : (
                   <strong>
-                    {new Date(formData.dob).toLocaleDateString("en-GB")}
+                    {formData.dob
+                    ? new Date(formData.dob).toLocaleDateString("en-GB")
+                    : ""}
                   </strong>
                 )}
               </div>
