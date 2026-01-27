@@ -76,7 +76,7 @@ const useStyles = makeStyles({
   },
 });
 
-const Calendar = ({ onDateChange }) => {
+const Calendar = ({ onDateChange, inputClassName = "", ...rest }) => {
   const classes = useStyles();
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(() => {
@@ -179,7 +179,7 @@ const Calendar = ({ onDateChange }) => {
         <input
           type="text"
           value={formatDate(currentDate)}
-          className=" px-3 py-3.5 border rounded-md bg-sky-50 dark:bg-neutral-800 dark:border-neutral-700 cursor-pointer "
+          className={" px-3 py-3.5 border rounded-md bg-sky-50 dark:bg-neutral-800 dark:border-neutral-700 cursor-pointer " + inputClassName}
           readOnly
         />
         <IoToday

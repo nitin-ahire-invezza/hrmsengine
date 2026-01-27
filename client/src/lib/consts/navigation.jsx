@@ -33,6 +33,13 @@ export const DASHBOARD_SIDEBAR_LINKS = [
         icon: <FaAddressBook />,
         allowedAuth: [1, 2], // only admin can access
       },
+      // {
+      //   key: "employee",
+      //   label: "Add Employee",
+      //   path: "/pim/addemployee",
+      //   icon: <IoPersonAdd />,
+      //   allowedAuth: [1], // only admin can access
+      // },
       {
         key: "leave",
         label: "Add Holidays",

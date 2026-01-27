@@ -38,9 +38,8 @@ const createUser = async (req, res) => {
       });
     }
 
-    // TODO (dev) - Manage password for production
-    //const rowpassword = randomstring.generate(10);
-     const rowpassword = "Tomhardy@12";
+    const rowpassword = randomstring.generate(10);
+
     const hashPassword = await bcrypt.hash(rowpassword, 12);
 
     var obj = {
@@ -113,13 +112,12 @@ const createUser = async (req, res) => {
       </div>
     </div>
   </div>`;
-// TODO (dev) - Uncomment sendMail for prod
-/* 
+
     sendMail(
       EmployeeData.email,
       `Invezza HRMS Portal Account Created`,
       mailContent
-    ); */
+    );
 
     sendLog(`new account created for ${EmployeeData.email}`, "info")
 
@@ -512,12 +510,11 @@ const updateUser = async (req, res) => {
     </div>
   </div>`;
 
-  // TODO (dev) - Uncomment sendMail for production
-  /*   sendMail(
+    sendMail(
       updatedEmployeeData.email,
       `Invezza HRMS Portal Account Details Updated`,
       mailContent
-    ); */
+    );
 
     sendLog(`Details updated for ${updatedEmployeeData.email}`, "info")
 

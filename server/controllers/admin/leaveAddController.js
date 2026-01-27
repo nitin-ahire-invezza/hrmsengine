@@ -154,10 +154,9 @@ const EXCLUDE_ID = "67a9bdd0dec87617f2ff2c9a"; // Admin _id exclude
  * This function renews leaves on April 1 of every year.
  * Handles probationary employees. Assigns leaves once probation has ended.
  * Sets probation to 6 months. Total leaves never exceeds 18 leaves.
- * @param {Request} req 
+ * @param {Request} req
  * @param {Response} res 
  */
-// TODO (test) - Testing for leaves could be done from here.
 const addLeaves = async (req, res) => {
   try {
     // Get all employee data from the Employee model

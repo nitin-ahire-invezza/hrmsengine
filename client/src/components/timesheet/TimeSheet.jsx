@@ -201,7 +201,7 @@ export default function TimeSheet({ record, index }) {
       const Allattendance = data.attendance;
 
       if (response.ok) {
-        // FIXME - Note that here absent dates are actually present dates
+        // FIXME - Note that here absent dates are actually present dates (Variable name change needed)
         const allabsentdays = Allattendance.filter(
           (attendance) => (attendance.attendancestatus === 1 || attendance.attendancestatus === 2)
         );

@@ -352,6 +352,7 @@ const ApplyLeave = () => {
                   selectedDate={formData.fromdate}
                   onDateChange={(value) => handleDateChange("fromdate", value)}
                   className=""
+                  inputClassName="!pr-0"
                 />
               </div>
 
@@ -361,6 +362,7 @@ const ApplyLeave = () => {
                   selectedDate={formData.todate}
                   onDateChange={(value) => handleDateChange("todate", value)}
                   className=""
+                  inputClassName="!pr-0"
                 />
               </div>
             </div>
