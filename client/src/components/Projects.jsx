@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import ApiendPonits from "../api/APIEndPoints.json";
 import userprofile from "../assets/images/clientAvatar.png";
 import { FaHospitalUser } from "react-icons/fa";
@@ -7,6 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { FaExternalLinkAlt } from "react-icons/fa";
 import Loading from "./Loading";
 import { motion } from "framer-motion";
+import { filter } from "@chakra-ui/react";
+import { AuthContext } from "../contexts/AuthContext";
 
 const Projects = () => {
   const token = localStorage.getItem("accessToken");
@@ -15,8 +17,11 @@ const Projects = () => {
   const [searchQuery, setSearchQuery] = useState(""); // Search query state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { userData } = useContext(AuthContext);
 
   const navigate = useNavigate();
+  const isAdmin = userData?.employeeData?.auth === 1;
+  const userId = userData?.employeeData?._id;
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -37,8 +42,21 @@ const Projects = () => {
           const activeProjects = (data.data || []).filter(
             (project) => !project.isdeleted
           );
-          setProjects(activeProjects);
-          setFilteredProjects(activeProjects); // Initialize filtered projects
+          const updatedProjects = activeProjects.map((project) => {
+            const isManagerAlreadyInAssignto = (project.assignto || []).some(
+              (assignee) =>
+                assignee._id?.toString() === project.managerId?.toString()
+            );
+
+            return {
+              ...project,
+              assignto: isManagerAlreadyInAssignto
+                ? project.assignto || []
+                : [...(project.assignto || []), userData?.employeeData],
+            };
+          });
+          setProjects(updatedProjects);
+          setFilteredProjects(updatedProjects); // Initialize filtered projects
         } else {
           console.error("Error fetching project:", data.msg);
           setError(data.msg);
@@ -55,16 +73,22 @@ const Projects = () => {
 
   useEffect(() => {
     const filtered = projects.filter(
-      (project) =>
-        project.projectname.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.clientid.companyname
-          .toLowerCase()
-          .includes(searchQuery.toLowerCase()) ||
-        (project.projectid?.toString().toLowerCase() || "").includes(
-          searchQuery.toLowerCase()
-        ) ||
-        project._id.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+      (project) => {
+        // Role-based access check first
+        const hasAccess = isAdmin || project.managerId === userId;
+
+        if (!hasAccess) return false;
+
+        // Search checks
+        const query = searchQuery.toLowerCase();
+
+        return (
+          project.projectname?.toLowerCase().includes(query) ||
+          project.clientid?.companyname?.toLowerCase().includes(query) ||
+          project.projectid?.toString().toLowerCase().includes(query) ||
+          project._id?.toLowerCase().includes(query)
+        );
+      });
     setFilteredProjects(filtered);
   }, [searchQuery, projects]);
 
@@ -233,7 +257,7 @@ const Projects = () => {
                           {project.assignto.slice(0, 3).map((employee) => (
                             <div
                               key={employee._id}
-                              className="relative -ml-2"
+                              className=" -ml-2"
                               onMouseEnter={() => setHoveredId(employee._id)}
                               onMouseLeave={() => setHoveredId(null)}
                               onClick={() => handleViewClick(employee._id)}
@@ -247,7 +271,7 @@ const Projects = () => {
                           ))}
 
                           {project.assignto.length > 3 && (
-                            <div className="relative">
+                            <div className="">
                               {/* +N Badge with Hoverable Tooltip */}
                               <div className="w-8 h-8 flex items-center justify-center bg-gray-300 dark:bg-neutral-700 text-sm font-medium rounded-full cursor-pointer group/profile">
                                 +{project.assignto.length - 3}

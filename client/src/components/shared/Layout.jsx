@@ -4,7 +4,7 @@ import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { motion } from "framer-motion";
 
-const Layout = ({ handleThemeSwitch, theme }) => {
+const Layout = ({ handleThemeSwitch, theme, routes }) => {
   return (
     <div className="bg-[#D9D9D9] dark:bg-neutral-900 flex flex-row max-h-screen w-screen overflow-hidden">
       <Sidebar
@@ -21,6 +21,7 @@ const Layout = ({ handleThemeSwitch, theme }) => {
           <Header
             theme={theme}
             handleThemeSwitch={handleThemeSwitch}
+            routes={routes}
             className="z-50"
           />
         </motion.div>

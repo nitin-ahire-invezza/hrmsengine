@@ -59,6 +59,12 @@ router.post(
   timesheetController.getTimesheetByDate
 );
 router.post(
+  "/gettimesheetbydateemployee",
+  auth,
+  getTimesheetByDateValidator,
+  timesheetController.getTimesheetByDateForEmployee
+);
+router.post(
   "/gettimesheetdays",
   auth,
   getTimesheetByDateValidator,
@@ -194,5 +200,6 @@ router.post(
 
 // Route for viewing teams
 router.get("/viewteam", auth, userController.viewTeam);
+router.post("/checkmembership", auth, userController.checkMembership);
 
 module.exports = router;

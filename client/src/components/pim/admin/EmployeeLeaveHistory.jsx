@@ -428,7 +428,11 @@ const EmployeeLeaveHistory = (Id, getLeaveRecord) => {
                 <div className="col-span-2">{record.reason}</div>
                 <div className="col-span-1">{record.fromdate}</div>
                 <div className="col-span-1">{record.todate}</div>
-                <div className="col-span-1">{record.totaldays}</div>
+                <div className="col-span-1">{record.halfday === true
+                                              ? record.halfday_post_lunch === true
+                                                ? record.totaldays + " Second"
+                                                : record.totaldays + " First"
+                                              : record.totaldays}</div>
                 <div className="col-span-2 flex items-center gap-1 ">
                   <div>
                     {/* <span className={getStatusClass(record.applicationstatus)}>

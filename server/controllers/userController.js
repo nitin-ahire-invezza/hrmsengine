@@ -2,6 +2,7 @@ const { validationResult } = require("express-validator");
 const Employee = require("../model/employeeModel");
 const EmployeeProfile = require("../model/employeeProfile");
 const { sendLog } = require('../controllers/admin/settingController');
+const mongoose = require("mongoose");
 
 const Upload = require("../helpers/upload");
 const Employeeprofile = require("../model/employeeProfile");
@@ -38,7 +39,9 @@ const createUser = async (req, res) => {
       });
     }
 
+    // TODO (dev) - Change password for prod
     const rowpassword = randomstring.generate(10);
+    //const rowpassword = "TomHardy@12";
 
     const hashPassword = await bcrypt.hash(rowpassword, 12);
 
@@ -112,7 +115,7 @@ const createUser = async (req, res) => {
       </div>
     </div>
   </div>`;
-
+// TODO (dev) - Uncomment to enable sending email
     sendMail(
       EmployeeData.email,
       `Invezza HRMS Portal Account Created`,
@@ -509,7 +512,7 @@ const updateUser = async (req, res) => {
       </div>
     </div>
   </div>`;
-
+// TODO (dev) - Uncomment this for prod
     sendMail(
       updatedEmployeeData.email,
       `Invezza HRMS Portal Account Details Updated`,
@@ -778,7 +781,25 @@ const viewProfilePic = async (req, res) => {
   }
 };
 
-// http://localhost:3000/api/viewteam
+/**
+ * Retrieves all unique team members assigned to projects
+ * managed by the authenticated manager (from JWT).
+ *
+ * Flow:
+ * 1. Gets managerId from req.employee.
+ * 2. Fetches projects managed by the manager.
+ * 3. Collects unique employee IDs from `assignto` arrays.
+ * 4. Removes managerId from the list.
+ * 5. Fetches employee details and merges profile data.
+ *
+ * Responses:
+ * - 200 → { success: true, data: Employee[] }
+ * - 400 → Manager not found or unexpected error
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Promise<Response>}
+ */
 const viewTeam = async (req, res) => {
   try {
     // Get manager ID from authenticated user
@@ -848,6 +869,182 @@ const viewTeam = async (req, res) => {
   }
 }
 
+/**
+ * Queries the Employee document to check for auth value and decides based on it whether the user is admin(1) or HR(2)
+ * @param {ObjectId of mongoose} managerId 
+ * @returns Boolean. True = The given ID is an admin or HR. False = Not admin or HR or error.
+ */
+const isAdminOrHR = async (managerId) => {
+  const employee = await Employee.findOne({
+    _id: managerId,
+    auth: { $in: [1, 2] }
+  }).lean();
+
+  return !!employee;
+};
+
+
+
+/**
+ * Checks whether the given employeeId belongs to any project
+ * managed by the authenticated manager (from JWT).
+ *
+ * Flow:
+ * 1. Validates managerId from token and employeeId from request body.
+ * 2. Ensures both are valid MongoDB ObjectIds.
+ * 3. Fetches projects where managerId matches.
+ * 4. Returns true if employeeId exists in any project's `assignto` array.
+ *
+ * Responses:
+ * - 200 → { isMember: true | false }
+ * - 400 → Invalid or missing employeeId
+ * - 401 → Authentication/managerId missing or invalid
+ * - 403 → Employee not part of manager's team
+ * - 500 → Server error
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Promise<Response>}
+ */
+const checkMembership = async (req, res) => {
+  try {
+    const { employeeId } = req.body;
+    const managerId = req.employee?._id ?? null;
+    
+    console.log("=== Membership Check Started ===");
+    console.log("Employee ID from request:", employeeId);
+    console.log("Manager ID from token:", managerId);
+
+    // Validate managerId
+    if (!managerId) {
+      console.log("ERROR: Manager ID not found in token");
+      return res.status(401).json({ 
+        isMember: false, 
+        message: "Authentication required. Manager ID not found." 
+      });
+    }
+
+    // Validate employeeId
+    if (!employeeId) {
+      console.log("ERROR: Employee ID missing in request body");
+      return res.status(400).json({ 
+        isMember: false, 
+        message: "Employee ID is required" 
+      });
+    }
+
+    // Validate that employeeId is a valid ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(employeeId)) {
+      console.log("ERROR: Invalid employee ID format:", employeeId);
+      return res.status(400).json({ 
+        isMember: false, 
+        message: "Invalid employee ID format" 
+      });
+    }
+
+    // Validate that managerId is a valid ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(managerId)) {
+      console.log("ERROR: Invalid manager ID format:", managerId);
+      return res.status(401).json({ 
+        isMember: false, 
+        message: "Invalid manager ID in token" 
+      });
+    }
+
+    // Step 0: Check if the managerId is actually a admin or HR by querying employees field (employees.auth field)
+    const privileged = await isAdminOrHR(managerId);
+
+    if (privileged) {
+      return res.status(200).json({ isMember: true });
+    }
+
+    // Step 1 & 2: Query projects where the user is the manager
+    const projects = await Project.find({ 
+      managerId: new mongoose.Types.ObjectId(managerId) 
+    });
+
+    console.log("Projects found:", projects.length);
+    
+    // If no projects found, the employee cannot be a member
+    if (!projects || projects.length === 0) {
+      console.log("No projects found for manager:", managerId);
+      return res.status(200).json({ isMember: false });
+    }
+
+    // Debug: Log project details
+    projects.forEach((project, index) => {
+      console.log(`Project ${index + 1}:`, {
+        id: project._id,
+        name: project.name || 'N/A',
+        assignto: project.assignto,
+        assigntoType: Array.isArray(project.assignto) ? 'array' : typeof project.assignto,
+        assignToLength: project.assignto?.length || 0
+      });
+    });
+
+    // Step 3: Check if employeeId exists in assignTo field of any project
+    const employeeObjectId = new mongoose.Types.ObjectId(employeeId);
+    
+    const isMember = projects.some(project => {
+      // Safety check: ensure assignTo exists and is an array
+      if (!project.assignto || !Array.isArray(project.assignto)) {
+        console.log(`WARNING: Project ${project._id} has invalid assignTo field:`, project.assignto);
+        return false;
+      }
+
+      // Check if employeeId exists in this project's assignTo array
+      const found = project.assignto.some(assignedId => {
+        // Additional safety check for assignedId
+        if (!assignedId) {
+          console.log(`WARNING: Null/undefined assignedId in project ${project._id}`);
+          return false;
+        }
+        
+        // Convert to ObjectId if it's a string
+        const assignedObjectId = typeof assignedId === 'string' 
+          ? new mongoose.Types.ObjectId(assignedId)
+          : assignedId;
+        
+        return assignedObjectId.equals(employeeObjectId);
+      });
+
+      if (found) {
+        console.log(`Employee ${employeeId} found in project:`, project._id);
+      }
+
+      return found;
+    });
+
+    console.log("Final membership result:", isMember);
+    console.log("=== Membership Check Completed ===");
+
+    if (isMember) {
+      return res.status(200).json({ isMember: true });
+    } else {
+      // Access rights violated - employee exists but not in manager's team
+      console.log("Access denied: Employee not found in any project");
+      return res.status(403).json({ 
+        isMember: false, 
+        message: "Access denied. Employee is not a member of your team." 
+      });
+    }
+
+  } catch (error) {
+    console.error("=== Membership Check Error ===");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+    
+    // Step 4: Handle any other errors
+    return res.status(500).json({ 
+      isMember: false, 
+      message: "An error occurred while checking membership" 
+    });
+  }
+};
+
+
+
 module.exports = {
   createUser,
   forgotPassword,
@@ -862,5 +1059,6 @@ module.exports = {
   updateProfile,
   viewProfilePic,
   employeedetails,
-  viewTeam
+  viewTeam,
+  checkMembership
 };

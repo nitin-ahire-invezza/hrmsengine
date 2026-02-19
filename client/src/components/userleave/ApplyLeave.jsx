@@ -107,6 +107,7 @@ const ApplyLeave = () => {
     holidayname: "",
     reason: "",
     halfday: false,
+    halfday_post_lunch: false
   });
   const [errors, setErrors] = useState([]);
   const [message, setMessage] = useState("");
@@ -179,48 +180,55 @@ const ApplyLeave = () => {
     }
   };
 
-  const validateForm = () => {
-    const errorList = [];
+  const validateForm = (data) => {
+  const errorList = [];
 
-    if (!formData.leavetype) {
-      errorList.push("Leave Type is required");
+  if (!data.leavetype) {
+    errorList.push("Leave Type is required");
+  }
+
+  if (data.leavetype === "leave") {
+    if (!data.fromdate) {
+      errorList.push("From Date is required");
     }
-
-    if (formData.leavetype === "leave") {
-      if (!formData.fromdate) {
-        errorList.push("From Date is required");
-      }
-      if (!formData.todate) {
-        errorList.push("To Date is required");
-      }
-      if (formData.fromdate > formData.todate) {
-        errorList.push("From Date must be before or equal to To Date.");
-      }
+    if (!data.todate) {
+      errorList.push("To Date is required");
     }
-
-    if (formData.leavetype === "leave" && !formData.leavesubtype) {
-      errorList.push("Leave Subtype is required");
+    if (data.fromdate > data.todate) {
+      errorList.push("From Date must be before or equal to To Date.");
     }
+  }
 
-    if (formData.leavetype === "Optional holiday" && !formData.holidayname) {
-      errorList.push("Holiday Name is required");
-    }
+  if (data.leavetype === "leave" && !data.leavesubtype) {
+    errorList.push("Leave Subtype is required");
+  }
 
-    setErrors(errorList);
+  if (data.leavetype === "Optional holiday" && !data.holidayname) {
+    errorList.push("Holiday Name is required");
+  }
 
-    // Clear errors after 4 seconds
-    if (errorList.length > 0) {
-      setTimeout(() => setErrors([]), 4000);
-    }
+  setErrors(errorList);
 
-    return errorList.length === 0;
-  };
+  if (errorList.length > 0) {
+    setTimeout(() => setErrors([]), 4000);
+  }
+
+  return errorList.length === 0;
+};
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    const safeForm = {
+    ...formData,
+    halfday_post_lunch: formData.halfday
+      ? formData.halfday_post_lunch
+      : false,
+  };
 
+  if (!validateForm(safeForm)) return;
+    const payload = { ...safeForm, employee_id };
     try {
       const response = await fetch(
         `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.leaveapplication}`,
@@ -230,10 +238,7 @@ const ApplyLeave = () => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({
-            ...formData,
-            employee_id,
-          }),
+          body: JSON.stringify(payload),
         }
       );
       const result = await response.json();
@@ -246,6 +251,7 @@ const ApplyLeave = () => {
           holidayname: "",
           reason: "",
           halfday: false,
+          halfday_post_lunch: false,
           totaldays: "",
         });
         setMessage("Application submitted successfully!");
@@ -439,36 +445,73 @@ const ApplyLeave = () => {
         )}
 
         {formData.leavetype === "leave" && (
-          <div className="flex items-center">
-            <input
-              id="halfday-switch"
-              type="checkbox"
-              name="halfday"
-              checked={formData.halfday}
-              onChange={handleChange}
-              className="hidden peer"
-            />
-            <label
-              htmlFor="halfday-switch"
-              className="flex items-center cursor-pointer space-x-2"
-            >
-              <span
-                className={`relative inline-flex items-center cursor-pointer w-10 h-6 dark:bg-neutral-600 bg-gray-300 rounded-full transition-colors duration-300 ease-in-out ${
-                  formData.halfday ? "bg-indigo-600 dark:bg-indigo-600" : ""
-                }`}
+          <div className="mt-2 flex flex-col sm:flex-row lg:flex-col 2xl:flex-row gap-2 justify-between">
+            <div className="w-full">
+              <input
+                id="halfday-switch"
+                type="checkbox"
+                name="halfday"
+                checked={formData.halfday}
+                onChange={handleChange}
+                className="hidden peer"
+              />
+              <label
+                htmlFor="halfday-switch"
+                className="flex items-center space-x-2 cursor-pointer"
               >
                 <span
-                  className={`absolute top-1 left-1 w-4 h-4 dark:bg-stone-300 bg-white rounded-full shadow-lg transform transition-transform duration-300 ease-in-out ${
-                    formData.halfday ? "translate-x-4" : ""
+                  className={`relative inline-flex items-center w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${formData.halfday ? "bg-indigo-600" : "bg-gray-300 dark:bg-neutral-600"
+                    }`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white dark:bg-stone-300 rounded-full shadow-lg transform transition-transform duration-300 ease-in-out ${formData.halfday ? "translate-x-4" : ""
+                      }`}
+                  />
+                </span>
+                <span>{formData.halfday ? "Half Day" : "Full Day"}</span>
+              </label>
+            </div>
+            <div className="w-full">
+              {/* disabled when halfday is false */}
+              <input
+                id="halfday-shift"
+                type="checkbox"
+                name="halfday_post_lunch"
+                checked={formData.halfday_post_lunch}
+                onChange={handleChange}
+                className="hidden peer"
+                disabled={!formData.halfday}
+                aria-disabled={!formData.halfday}
+                aria-describedby="halfday-shift-help"
+              />
+
+              {/* label becomes visually 'inactive' when disabled */}
+              <label
+                htmlFor="halfday-shift"
+                className={`flex items-center space-x-2 ${!formData.halfday ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                   }`}
-                />
-              </span>
-              <span className="">
-                {formData.halfday ? "Half Day" : "Full Day"}
-              </span>
-            </label>
+              >
+                <span
+                  className={`relative inline-flex items-center w-10 h-6 rounded-full transition-colors duration-300 ease-in-out ${formData.halfday_post_lunch
+                      ? "bg-indigo-600"
+                      : "bg-gray-300 dark:bg-neutral-600"
+                    }`}
+                >
+                  <span
+                    className={`absolute top-1 left-1 w-4 h-4 bg-white dark:bg-stone-300 rounded-full shadow-lg transform transition-transform duration-300 ease-in-out ${formData.halfday_post_lunch ? "translate-x-4" : ""
+                      }`}
+                  />
+                </span>
+                <span>{formData.halfday_post_lunch ? "Second half" : "First half"}</span>
+              </label>
+
+
+            </div>
           </div>
+
         )}
+
+
 
         {formData.leavetype === "leave" && (
           <div>

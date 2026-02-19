@@ -262,7 +262,7 @@ const EmployeeAttendanceBrief = () => {
                         className="text-yellow-500"
                       />
                       <span className="hidden md:flex">Half Day</span>
-                      <span className="md:hidden flex">Half D</span>
+                      <span className="md:hidden flex">Half Day</span>
                     </div>
                     <span className="font-bold text-xl md:text-3xl text-yellow-500">
                       {statusCounts[2]}

@@ -131,6 +131,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
   const [datesFromApi, setDatesFromApi] = useState(new Set());
   const [timesheetDurations, setTimesheetDurations] = useState({});
   const [showMore, setShowMore] = useState(false);
+  const eid = userData?.employeeData?._id;
 
   useEffect(() => {
     const fetchTimesheetDates = async () => {
@@ -184,6 +185,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
+            eid: eid,
             employee_id: _id,
             year: currentYear,
           }),
@@ -288,7 +290,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
     project: "",
   });
 
-  const eid = userData?.employeeData?._id;
+
 
   // Fetch timesheet data on component mount and date change
   useEffect(() => {
@@ -304,6 +306,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
+              eid: eid,
               employee_id: _id,
               date: currentDate,
             }),
@@ -319,6 +322,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
           setError(data.msg);
         }
       } catch (error) {
+        console.log("Error: ", error);
         setError("Failed to fetch timesheet data");
       } finally {
         setLoading(false);
@@ -783,7 +787,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
         className="backdrop-blur-sm"
       >
         <div className="p-4 flex flex-col gap-2 dark:text-white bg-sky-50 dark:bg-neutral-900 rounded-t-2xl h-[50vh]">
-          <div className="hidde">
+          
             {error && (
               <div className="absolute bottom-0 right-0 m-4 flex flex-col gap-2 z-50">
                 {(Array.isArray(error) ? error : [error]).map((err, index) => (
@@ -950,7 +954,7 @@ const AdminTimeSheet = ({ Id, record, index }) => {
                 </div>
               </motion.div>
             )}
-          </div>
+          
         </div>
       </Drawer>
     </div>

@@ -35,9 +35,7 @@ const Employeelist = () => {
   const token = localStorage.getItem("accessToken");
   const navigate = useNavigate();
 
-  // Fetch employee details
-  useEffect(() => {
-    const fetchEmployeeList = async () => {
+  const fetchEmployeeList = async () => {
       setLoading(true);
       try {
         const response = await fetch(
@@ -67,8 +65,9 @@ const Employeelist = () => {
         setLoading(false);
       }
     };
-
-    fetchEmployeeList();
+  // Fetch employee details
+  useEffect(() => {
+  if (token) fetchEmployeeList();
   }, [token]);
 
   // Fetch employee attendance records and update employee list

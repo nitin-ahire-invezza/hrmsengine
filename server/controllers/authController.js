@@ -509,6 +509,7 @@ const { sendMail } = require("../helpers/mailer");
  * @param {Object} employee 
  * @returns {string} JWT access token
  */
+// TODO (dev) - Change the expiry time for logout
 const generateAccessToken = (employee) => {
   const token = jwt.sign(employee, process.env.ACCESS_TOKEN, {
     expiresIn: "10h",
@@ -609,6 +610,7 @@ const loginEmployee = async (req, res) => {
 
     // Generate OTP (6-digit code)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    //const otp = "000000"; // TODO (dev) - Change to above line for prod
     const otpExpiry = new Date(Date.now() + 3 * 60 * 1000); // OTP valid for 3 minutes
 
     // Remove existing OTP if any
@@ -660,7 +662,7 @@ const loginEmployee = async (req, res) => {
     </div>
   </div>`;
 
-
+// TODO (dev) - Uncomment to enable sending email
     await sendMail(
       email,
       `Invezza HRMS Portal - Account Verification Code`,
@@ -1109,7 +1111,7 @@ const updateemployeebyadmin = async (req, res) => {
       </div>
     </div>
   </div>`;
-
+// TODO (dev) - Uncomment to enable sending email
     sendMail(
       updatedEmployeeData.email,
       `Invezza HRMS Portal Account Details Updated`,

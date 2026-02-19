@@ -138,6 +138,7 @@ const ViewProject = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [confirmationName, setConfirmationName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [activeManagers, setActiveManagers] = useState([]);
 
   const fetchProject = async () => {
     try {
@@ -186,26 +187,35 @@ const ViewProject = () => {
     fetchProject();
   }, [projectId, token]);
 
+
+
   const handleUpdateProject = async (e) => {
     e.preventDefault();
 
-  if (!formData.managerId) {
-    setErrorMessage("Please select a manager");
-    return;
-  }
-  setErrorMessage("");
+    if (!formData.managerId) {
+      setErrorMessage("Please select a manager");
+      return;
+    }
+    
+    // Check if manager selected is actually a manager
+    /* const isManager = isManager(formData?.managerId);
+    if(!isManager){
+      setErrorMessage("Selected employee is not a manager.");
+      return;
+    } */
+    setErrorMessage("");
 
-  const managerId = String(formData.managerId);               
-  const assigntoAsStrings = formData.assignto.map(String);
-  const alreadyAssigned = assigntoAsStrings.includes(managerId);
+    const managerId = String(formData.managerId);               
+    const assigntoAsStrings = formData.assignto.map(String);
+    const alreadyAssigned = assigntoAsStrings.includes(managerId);
 
-  const newAssignto = alreadyAssigned
-    ? formData.assignto
-    : [...formData.assignto, managerId];
+    const newAssignto = alreadyAssigned
+      ? formData.assignto
+      : [...formData.assignto, managerId];
 
  
-  const payload = { ...formData, assignto: newAssignto, managerId, id: projectId };
-  setFormData(prev => ({ ...prev, assignto: newAssignto }));
+    const payload = { ...formData, assignto: newAssignto, managerId, id: projectId };
+    setFormData(prev => ({ ...prev, assignto: newAssignto }));
     try {
       const response = await fetch(
         `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.updateproject}`,
@@ -238,7 +248,7 @@ const ViewProject = () => {
 
   const handleViewClick = (employeeId) => {
     navigate(`/pim/employee-details/${employeeId}`, {
-      state: { activeTab: "Info" },
+      state: { activeTab: "Info", from: `/projects/viewproject/${projectId}` },
     });
   };
 
@@ -264,12 +274,15 @@ const ViewProject = () => {
       );
 
       const data = await response.json();
-
       if (response.ok) {
         const activeEmployees = data.data.filter(
           (employee) => employee.status === 1
         );
+        const activeManagers = data.data.filter(
+          (employee) => employee.auth === 3
+        );
         setActiveEmployees(activeEmployees);
+        setActiveManagers(activeManagers);
       } else {
         console.error(
           "Error in Response:",
@@ -627,7 +640,7 @@ const ViewProject = () => {
               />
               <span>Manager</span>
               <SelectManager
-                options={activeEmployees}
+                options={activeManagers}
                 projectForm={formData}
                 setProjectForm={setFormData}
               />

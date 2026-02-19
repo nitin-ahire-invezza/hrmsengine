@@ -230,8 +230,8 @@ const TeamList = () => {
 
 
   return (
-    <div className="dark:text-white pb-32 h-full">
-      <MenuTabs />
+    <div className="dark:text-white pb-20 h-full">
+      {/* <MenuTabs /> */}
 
       <div className="bg-white dark:bg-neutral-950 h-full p-2 rounded-md flex flex-col gap-2 mb-14">
         <div className="grid grid-cols-4 sm:grid-cols-3 gap-2">

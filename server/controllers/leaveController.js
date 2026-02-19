@@ -3,6 +3,7 @@ const LeaveBalance = require("../model/leaveBalanceModel");
 const Employeeprofile = require("../model/employeeProfile");
 const { validationResult } = require("express-validator");
 const { sendLog } = require('../controllers/admin/settingController');
+const mongoose = require("mongoose");
 
 
 const getLeaveDetails = async (req, res) => {
@@ -64,6 +65,130 @@ const getLeaveDetails = async (req, res) => {
   }
 };
 
+
+/**
+ * Helper function to get all dates between two date strings (inclusive)
+ * @param {String} startDateStr - Date string in YYYY-MM-DD format
+ * @param {String} endDateStr - Date string in YYYY-MM-DD format
+ * @returns {Array<String>} Array of date strings in YYYY-MM-DD format
+ */
+const getDatesInRange = (startDateStr, endDateStr) => {
+  const dates = [];
+  const currentDate = new Date(startDateStr + 'T00:00:00.000Z');
+  const endDate = new Date(endDateStr + 'T00:00:00.000Z');
+
+  while (currentDate <= endDate) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    dates.push(dateStr);
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+  }
+
+  return dates;
+};
+
+/**
+ * Checks whether a new leave request overlaps with any
+ * existing pending leave applications (applicationstatus = 0)
+ * for the same employee.
+ *
+ * Flow:
+ * 1. Validates required inputs (fromDate, toDate, employee_id).
+ * 2. Fetches all pending leave applications for the employee.
+ * 3. Expands date ranges into individual date arrays.
+ * 4. Detects:
+ *    - Overlap between incoming and existing dates.
+ *    - Duplicate dates within existing records (data integrity check).
+ *
+ * Returns:
+ * - true  → Overlapping leave found
+ * - false → No overlap
+ * - throws Error → Invalid input or data integrity issue
+ *
+ * @param {string} fromDate
+ * @param {string} toDate
+ * @param {string} employee_id
+ * @returns {Promise<boolean>}
+ */
+const checkOverlapLeaveApplication = async (fromDate, toDate, employee_id) => {
+  try {
+
+    // Validate inputs
+    if (!fromDate || !toDate || !employee_id) {
+      throw new Error("Missing required parameters: fromDate, toDate, or employee_id");
+    }
+
+    // Convert employee_id to ObjectId
+    const employeeObjectId = new mongoose.Types.ObjectId(employee_id);
+
+    // Step 1: Query leave applications with applicationstatus = 0 
+    const existingLeaveApplications = await LeaveApplication.find({
+      employee_id: employeeObjectId,
+      applicationstatus: 0
+    }).lean();
+
+
+    // If no existing pending applications, no overlap possible
+    if (!existingLeaveApplications || existingLeaveApplications.length === 0) {
+      console.log("No existing pending applications - no overlap");
+      return false;
+    }
+
+    // Step 2: Create Bucket 1 - incomingLeavesDaysArray
+    const incomingLeavesDaysArray = getDatesInRange(fromDate, toDate);
+
+    // Create Bucket 2 - existingLeavesDaysArray
+    const existingLeavesDaysArray = [];
+    const dateTracker = new Set();
+
+    for (const application of existingLeaveApplications) {
+      const { fromdate, todate, _id } = application;
+      
+      if (!fromdate || !todate) {
+        console.warn(`Warning: Application ${_id} missing fromdate or todate`);
+        continue;
+      }
+
+      // Get all dates for this application
+      const applicationDates = getDatesInRange(fromdate, todate);
+      
+      // Check for duplicates before adding to bucket 2
+      for (const dateStr of applicationDates) {
+        if (dateTracker.has(dateStr)) {
+          // Found a duplicate date in existing records
+          const duplicateInfo = {
+            applicationId: _id,
+            date: dateStr,
+            fromDate: fromdate,
+            toDate: todate
+          };
+          console.error("Duplicate date found in existing records:", duplicateInfo);
+          throw new Error(
+            `Data integrity error: Duplicate leave date (${dateStr}) found in existing application (ID: ${_id})`
+          );
+        }
+        
+        dateTracker.add(dateStr);
+        existingLeavesDaysArray.push(dateStr);
+      }
+    }
+
+    // Step 3: Compare both buckets - check for any overlap
+    for (const incomingDate of incomingLeavesDaysArray) {
+      if (existingLeavesDaysArray.includes(incomingDate)) {
+        console.log(`Overlap found: ${incomingDate} exists in both buckets`);
+        return true; // Overlap detected
+      }
+    }
+
+    return false; // No overlap
+
+  } catch (error) {
+    console.error("Error in checkOverlapLeaveApplication:", error);
+    throw error; 
+  }
+};
+
+
 // Function to apply for leave
 const applyLeave = async (req, res) => {
   try {
@@ -86,7 +211,8 @@ const applyLeave = async (req, res) => {
       holidayname,
       reason,
       halfday,
-      totaldays
+      totaldays,
+      halfday_post_lunch
     } = req.body;
 
     if (!reason) {
@@ -120,6 +246,23 @@ const applyLeave = async (req, res) => {
         .json({ message: "From Date Should Not be Today's or any Past date." });
     }
 
+    // Server side validation for halfday logic
+    if (leavetype === "leave") {
+      if (halfday) {
+        // If halfday is true, then halfday_post_lunch must be explicitly provided
+        if (typeof halfday_post_lunch !== "boolean") {
+          return res.status(400).json({
+            message:
+              "Please specify whether the Half Day is Pre Lunch or Post Lunch.",
+          });
+        }
+      } else {
+        // If halfday is false, ignore halfday_post_lunch completely
+        halfday_post_lunch = false;
+      }
+    }
+
+
     // Check if both fromdate and todate are in the past if leavetype is "leave"
     if (leavetype === "leave") {
       const currentDate = new Date();
@@ -137,6 +280,21 @@ const applyLeave = async (req, res) => {
       return res.status(404).json({ message: "Leave balance not found." });
     }
 
+    // Implement check if any other leave application exists for this given date range (fromDate, toDate)
+    // Following function may throw an error as said in the function flow
+     const isOverlappingLeaveApplication = await checkOverlapLeaveApplication(
+        fromdate, 
+        todate, 
+        employee_id
+      );
+      
+      if (isOverlappingLeaveApplication) {
+        return res.status(400).json({ 
+          success: false,
+          message: "You already have an existing leave application for one or more dates in this range" 
+        });
+      }
+
     // Initialize the leave application
     const leaveApplication = new LeaveApplication({
       employee_id,
@@ -148,6 +306,7 @@ const applyLeave = async (req, res) => {
       reason,
       totaldays: 0, // Placeholder, will be set based on leave type
       halfday: halfday || false,
+      halfday_post_lunch: halfday_post_lunch || false,
     });
 
     if (leavetype === "leave") {
@@ -161,7 +320,7 @@ const applyLeave = async (req, res) => {
       const oneDay = 24 * 60 * 60 * 1000;
       let totaldays = Math.round((toDate - fromDate) / oneDay) + 1; // Including both fromdate and todate
       if (halfday) {
-        totaldays -= 0.5;
+        totaldays > 1 ? totaldays -= totaldays*0.5 : totaldays -= 0.5; // If it's a half day leave, reduce total days by half
       }
       leaveApplication.totaldays = totaldays;
 
@@ -219,7 +378,7 @@ const applyLeave = async (req, res) => {
 
     // Save the leave application
     await leaveApplication.save();
-
+    
     // Update attendance records if leave is approved
     if (leaveApplication.applicationstatus === 1) {
       const startDate = new Date(leaveApplication.fromdate);
@@ -251,6 +410,17 @@ const applyLeave = async (req, res) => {
     });
   } catch (error) {
     console.error("Error applying leave:", error);
+
+    // To account for data integrity error
+    if (error.message.includes("Data integrity error")) {
+      return res.status(500).json({
+        success: false,
+        message: "A system error was detected in existing leave records. Please contact support.",
+        error: error.message
+      });
+    }
+
+
     return res.status(500).json({
       success: false,
       msg: "Failed to apply leave",
@@ -355,6 +525,7 @@ const leavehistory = async (req, res) => {
       comment: record.comment,
       totaldays: record.totaldays,
       halfday: record.halfday,
+      halfday_post_lunch: record.halfday_post_lunch,
       createdAt: formatDateTime(record.createdAt),
       updatedAt: formatDateTime(record.updatedAt),
       updatedDate: formatDate(record.updatedAt),  // Separate date
