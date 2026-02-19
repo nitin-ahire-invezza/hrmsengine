@@ -18,6 +18,7 @@ export default function Greeting() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [progress, setProgress] = useState({ elapsed: 0, remaining: 0 });
+  const [isProcessing, setIsProcessing] = useState(false); // Punch in button state
 
   const totalSeconds = 9 * 3600; // 9 hours in seconds
 
@@ -84,8 +85,9 @@ export default function Greeting() {
   };
 
   const handlePunchButtonClick = async () => {
+    if (isProcessing) return;            // prevent re-entry
+    setIsProcessing(true);
     const mark = isPunchedIn ? "Out" : "In";
-
     try {
       let inlocation = null;
       let outlocation = null;
@@ -146,6 +148,8 @@ export default function Greeting() {
       // Handle exceptions
       setError(error.message || "An error occurred. Please try again.");
       setTimeout(() => setError(""), 4000);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -260,11 +264,14 @@ export default function Greeting() {
             <div className="flex flex-col items-end">
               {loading ? null : hasTodaysAttendance ? (
                 <button
+                  disabled={isProcessing}
                   className={`px-2 py-1.5 rounded-md  flex items-center gap-1 text-xs font-bold  ${
                     isPunchedIn
                       ? "text-red-500 bg-red-500/20 hover:bg-red-500/30"
                       : "text-green-500 bg-green-500/20 hover:bg-green-500/30"
-                  }`}
+                  }
+                  ${isProcessing ? "opacity-60 pointer-events-none" : ""}
+                  `}
                   onClick={handlePunchButtonClick}
                 >
                   {isPunchedIn ? "Punch Out" : "Punch In"}{" "}
@@ -276,10 +283,12 @@ export default function Greeting() {
                 </button>
               ) : (
                 <button
-                  className="px-2 py-1.5 rounded-md flex items-center gap-1 text-xs font-bold hover:bg-green-500/30 text-green-500 bg-green-500/20"
+                  disabled={isProcessing}
+                  className={`px-2 py-1.5 rounded-md flex items-center gap-1 text-xs font-bold hover:bg-green-500/30 text-green-500 bg-green-500/20
+                            ${isProcessing ? "opacity-60 pointer-events-none" : ""}`}
                   onClick={handlePunchButtonClick}
                 >
-                  Punch In <IoLogIn fontSize={20} />
+                  {isProcessing ? "Processing..." : "Punch In"} <IoLogIn fontSize={20} />
                 </button>
               )}
               <Link

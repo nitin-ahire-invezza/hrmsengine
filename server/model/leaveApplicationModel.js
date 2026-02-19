@@ -39,6 +39,10 @@ const leaveApplicationModel = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    halfday_post_lunch: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

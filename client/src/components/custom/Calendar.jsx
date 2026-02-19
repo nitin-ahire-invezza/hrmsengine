@@ -76,13 +76,19 @@ const useStyles = makeStyles({
   },
 });
 
-const Calendar = ({ onDateChange, inputClassName = "", ...rest }) => {
+const Calendar = ({ selectedDate, onDateChange, inputClassName = "", ...rest }) => {
   const classes = useStyles();
   const [showCalendar, setShowCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(() => {
-    const today = new Date();
-    return !isNaN(today.getTime()) ? today.toISOString().split("T")[0] : "";
+    const initial = selectedDate || new Date().toISOString().split("T")[0];
+    return initial;
   });
+  // Sync parent with the initial date on mount
+  useEffect(() => {
+    if (!selectedDate && currentDate) {
+      onDateChange(currentDate);
+    }
+  }, []);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 

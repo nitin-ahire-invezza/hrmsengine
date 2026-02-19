@@ -302,7 +302,7 @@ export default function TimeSheet({ record, index }) {
       try {
         setLoading(true);
         const response = await fetch(
-          `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.gettimesheet}`,
+          `${ApiendPonits.baseUrl}${ApiendPonits.endpoints.gettimesheetbyemployee}`,
           {
             method: "POST",
             headers: {
@@ -504,7 +504,7 @@ export default function TimeSheet({ record, index }) {
     : 0;
 
   const totalCompletedTasks = timesheetData[currentDate]
-    ? timesheetData[currentDate].filter((task) => task.remark === "1").length
+    ? timesheetData[currentDate].filter((task) => task.remark === "2").length
     : 0;
 
   // Render loading and error states

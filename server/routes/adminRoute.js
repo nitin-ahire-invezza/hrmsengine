@@ -379,4 +379,9 @@ router.get(
   settingController.log
 )
 
+// TODO (dev) - Uncomment this to test for leaves - http://localhost:4000/api/admin/run-add-leaves-cron
+/* router.post("/run-add-leaves-cron", async (req, res) => {
+  await leaveAddController.addLeaves(req, res);
+}); */
+
 module.exports = router;

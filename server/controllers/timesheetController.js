@@ -3,7 +3,34 @@ const Employee = require("../model/employeeModel");
 const { validationResult } = require("express-validator");
 const Project = require("../model/projectModel");
 const Attendance = require("../model/attendaceModel");
+const mongoose = require("mongoose");
 
+/**
+ * Creates or updates a timesheet entry for an employee.
+ *
+ * Flow:
+ * 1. Validates request input.
+ * 2. Verifies employee and project existence.
+ * 3. Ensures employee is assigned to the project and project is active.
+ * 4. Checks attendance for the given date:
+ *    - Must be Present (1) or Half Day (2).
+ *    - Half day requires minimum working hours of 4.5.
+ * 5. Creates a new timesheet or appends task to existing one.
+ *
+ * Key Rules:
+ * - Timesheet cannot be filled if employee was absent.
+ * - Employee must belong to the project.
+ * - Project must be active.
+ *
+ * Responses:
+ * - 200 → Timesheet saved successfully
+ * - 400 → Validation / business rule failure
+ * - 500 → Server error
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Promise<Response>}
+ */
 const fillTimesheet = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -141,7 +168,7 @@ const fillTimesheet = async (req, res) => {
   }
 };
 
-const getTimesheetByDate = async (req, res) => {
+const getTimesheetByDateForEmployee = async (req, res) => {
   try {
     const { employee_id, date } = req.body; // Only taking 'date' instead of startDate and endDate
 
@@ -151,19 +178,17 @@ const getTimesheetByDate = async (req, res) => {
         msg: "Missing required request body parameters",
       });
     }
-
-    // Fetch timesheet data for the specified date
-    const timesheets = await Timesheet.find({
-      employee_id,
-      date, // Directly filtering by the exact date
-    })
-      .populate({
-        path: "task.project",
-        // select: "projectName", // Adjust the fields to select as needed
-      })
-      .populate({
+    const timesheets = await Timesheet.find({ 
+      employee_id, 
+      date, // Directly filtering by the exact date 
+      }) 
+      .populate({ 
+        path: "task.project", 
+        // select: "projectName", 
+      }) 
+      .populate({ 
         path: "task.timesheet_id",
-        select: "_id", // Adjust the fields to select as needed
+         select: "_id", // Adjust the fields to select as needed 
       });
 
     // If no timesheets found for that date, return an empty response
@@ -199,21 +224,214 @@ const getTimesheetByDate = async (req, res) => {
   }
 };
 
-const getYearlyDurations = async (req, res) => {
-  try {
-    const { employee_id, year } = req.body;
+/**
+ * Common helper function to fetch timesheets with proper access control
+ * @param {ObjectId} eidObjectId - Logged-in employee's ID
+ * @param {ObjectId} employeeObjectId - Target employee's ID whose timesheets to fetch
+ * @param {Object} additionalFilters - Additional query filters (e.g., { date: "2026-02-10" })
+ * @returns {Object} { timesheets: Array, isPrivileged: Boolean, allowedProjectIds: Array }
+ */
+const fetchTimesheetsWithAccessControl = async (eidObjectId, employeeObjectId, additionalFilters = {}) => {
+  // 1) Lookup logged-in user's auth level
+  const loggedInEmployee = await Employee.findById(eidObjectId).select("auth").lean();
+  
+  if (!loggedInEmployee) {
+    throw new Error("EMPLOYEE_NOT_FOUND");
+  }
 
-    if (!employee_id || !year) {
+  const isPrivileged = [1, 2].includes(loggedInEmployee.auth);
+
+  let timesheetQuery = {
+    employee_id: employeeObjectId,
+    ...additionalFilters
+  };
+
+  let allowedProjectIds = [];
+
+  // 2) If not privileged, find projects managed by the logged-in user
+  if (!isPrivileged) {
+    const allowedProjects = await Project.find({
+      managerId: eidObjectId
+    }).select("_id").lean();
+
+    allowedProjectIds = allowedProjects.map(p => p._id.toString());
+
+    if (allowedProjectIds.length === 0) {
+      // No managed projects = no timesheets accessible
+      return { 
+        timesheets: [], 
+        isPrivileged, 
+        allowedProjectIds 
+      };
+    }
+
+    // Filter timesheets that have at least one task in managed projects
+    timesheetQuery["task.project"] = { $in: allowedProjects.map(p => p._id) };
+  }
+
+  // 3) Fetch timesheets
+  let timesheets = await Timesheet.find(timesheetQuery)
+    .populate({
+      path: "task.project",
+    })
+    .populate({
+      path: "task.timesheet_id",
+      select: "_id",
+    })
+    .lean();
+
+  // 4) If not privileged, filter tasks to only show those from managed projects
+  if (!isPrivileged) {
+    timesheets = timesheets
+      .map(timesheet => {
+        const filteredTasks = timesheet.task.filter(task => {
+          if (!task.project || !task.project._id) {
+            return false;
+          }
+          return allowedProjectIds.includes(task.project._id.toString());
+        });
+
+        if (filteredTasks.length === 0) {
+          return null;
+        }
+
+        return {
+          ...timesheet,
+          task: filteredTasks
+        };
+      })
+      .filter(Boolean);
+  }
+
+  return { 
+    timesheets, 
+    isPrivileged, 
+    allowedProjectIds 
+  };
+};
+
+/**
+ * Retrieves timesheet tasks for a specific employee on a given date,
+ * applying access control via shared helper.
+ *
+ * Flow:
+ * 1. Validates required parameters (eid, employee_id, date).
+ * 2. Applies access control using fetchTimesheetsWithAccessControl().
+ * 3. Filters timesheets by date.
+ * 4. Groups and returns tasks by date.
+ *
+ * Responses:
+ * - 200 → Timesheet data grouped by date
+ * - 400 → Missing parameters
+ * - 404 → No data found / employee not found
+ * - 500 → Server error
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Promise<Response>}
+ */
+const getTimesheetByDate = async (req, res) => {
+  try {
+    const { eid, employee_id, date } = req.body;
+    
+    if (!eid || !employee_id || !date) {
       return res.status(400).json({
         success: false,
         msg: "Missing required request body parameters",
       });
     }
 
-    const timesheetData = await Timesheet.find({ employee_id });
+    const eidObjectId = new mongoose.Types.ObjectId(eid);
+    const employeeObjectId = new mongoose.Types.ObjectId(employee_id);
 
-    // Filter timesheets to include only those within the specified year
-    const filteredData = timesheetData.filter((item) => {
+    // Use the shared helper function
+    const { timesheets } = await fetchTimesheetsWithAccessControl(
+      eidObjectId,
+      employeeObjectId,
+      { date: date }
+    );
+
+    if (timesheets.length === 0) {
+      return res.status(404).json({
+        success: false,
+        msg: "No timesheet data found for the given date",
+      });
+    }
+
+    // Aggregate tasks by date (function-specific logic)
+    const groupedByDate = timesheets.reduce((acc, timesheet) => {
+      const formattedDate = timesheet.date;
+      if (!acc[formattedDate]) {
+        acc[formattedDate] = [];
+      }
+      acc[formattedDate] = acc[formattedDate].concat(timesheet.task);
+      return acc;
+    }, {});
+
+    return res.status(200).json({
+      success: true,
+      data: groupedByDate,
+    });
+  } catch (error) {
+    console.error("Error fetching timesheet data:", error);
+    
+    if (error.message === "EMPLOYEE_NOT_FOUND") {
+      return res.status(404).json({ 
+        success: false, 
+        msg: "Logged-in employee not found" 
+      });
+    }
+    
+    return res.status(500).json({
+      success: false,
+      msg: "Failed to fetch timesheet data",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Retrieves total task durations per date for a specific employee
+ * within a given year, applying access control.
+ *
+ * Flow:
+ * 1. Validates required parameters (eid, employee_id, year).
+ * 2. Fetches accessible timesheets using shared helper.
+ * 3. Filters entries by specified year.
+ * 4. Calculates total task duration per date.
+ *
+ * Responses:
+ * - 200 → Array of { date, totalDuration }
+ * - 400 → Missing parameters
+ * - 404 → Employee not found
+ * - 500 → Server error
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Promise<Response>}
+ */
+const getYearlyDurations = async (req, res) => {
+  try {
+    const { eid, employee_id, year } = req.body;
+
+    if (!eid || !employee_id || !year) {
+      return res.status(400).json({
+        success: false,
+        msg: "Missing required request body parameters",
+      });
+    }
+
+    const eidObjectId = new mongoose.Types.ObjectId(eid);
+    const employeeObjectId = new mongoose.Types.ObjectId(employee_id);
+
+    // Use the shared helper function (no date filter, get all timesheets)
+    const { timesheets } = await fetchTimesheetsWithAccessControl(
+      eidObjectId,
+      employeeObjectId
+    );
+
+    // Filter timesheets to include only those within the specified year 
+    const filteredData = timesheets.filter((item) => {
       const itemYear = new Date(item.date).getFullYear();
       return itemYear === parseInt(year, 10);
     });
@@ -239,6 +457,14 @@ const getYearlyDurations = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching yearly durations:", error);
+    
+    if (error.message === "EMPLOYEE_NOT_FOUND") {
+      return res.status(404).json({ 
+        success: false, 
+        msg: "Logged-in employee not found" 
+      });
+    }
+    
     return res.status(500).json({
       success: false,
       msg: "Failed to fetch yearly durations",
@@ -592,4 +818,5 @@ module.exports = {
   getProjectDetails,
   getTimesheetdays,
   getYearlyDurations,
+  getTimesheetByDateForEmployee
 };

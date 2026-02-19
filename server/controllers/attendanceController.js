@@ -8,7 +8,31 @@ const { sendLog } = require('../controllers/admin/settingController');
 
 const { CronJob } = require("cron");
 
-// Function to mark attendance
+/**
+ * Handles employee punch-in and punch-out operations.
+ *
+ * Flow:
+ * 1. Validates request and location data.
+ * 2. Prevents punching during approved leave.
+ * 3. Finds or creates today's attendance record.
+ * 4. Enforces punch rules:
+ *    - Cannot punch Out before In.
+ *    - Cannot punch In/Out multiple times.
+ * 5. On punch Out:
+ *    - Calculates total working time.
+ *    - Sets attendancestatus:
+ *        1 = Full day (≥ 4 hours)
+ *        2 = Half day (< 4 hours) => Even 1 hour is treated as half day
+ *
+ * Responses:
+ * - 200 → Attendance updated successfully
+ * - 400 → Validation or business rule violation
+ * - 500 → Server error
+ *
+ * @param {Request} req
+ * @param {Response} res
+ * @returns {Promise<Response>}
+ */
 const markAttendance = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -142,7 +166,7 @@ const markAttendance = async (req, res) => {
 
     return res
       .status(200)
-      .json({ message: "Attendance marked successfully", attendance });
+      .json({ message: `employees ${employee_id} ${mark === "In" ? "punch in" : "punch out"}` , attendance });
   } catch (error) {
     return res.status(500).json({ message: "Server error", error });
   }
@@ -221,7 +245,24 @@ const getAttendance = async (req, res) => {
   }
 };
 
-// Function to check attendance for employees who haven't punched in by 01:59 PM
+/**
+ * Performs daily attendance validation for all employees.
+ *
+ * Flow:
+ * 1. Gets today's date and day of week.
+ * 2. Iterates through all employees.
+ * 3. If Saturday/Sunday → sets attendance status = 3 (Week Off).
+ * 4. On weekdays:
+ *    - If no record exists → creates record with status = 0 (Absent).
+ *    - If record exists but not marked "In" → updates status = 0 (Absent).
+ *    - Deducts 1 leave from leave balance for absentees.
+ *
+ * Attendance Status Codes:
+ *   0 = Absent
+ *   3 = Week Off
+ *
+ * @returns {Promise<void>}
+ */
 const checkAttendance = async () => {
   try {
     const now = new Date();
@@ -303,9 +344,25 @@ const checkAttendance = async () => {
     console.error("Error in attendance check:", error);
   }
 };
-// checkAttendance();
 const attendaceCheck = new CronJob("59 14 * * *", checkAttendance);
 
+/**
+ * Automatically marks all employees with attendance status "In"
+ * as "Out" for the current date.
+ *
+ * Flow:
+ * 1. Gets current date and time.
+ * 2. Finds attendance records where date = today and mark = "In".
+ * 3. Updates each record:
+ *    - mark → "Out"
+ *    - sets outtime and default outlocation
+ *    - calculates total working time (intime → outtime)
+ *    - sets attendancestatus:
+ *        1 = Full day (≥ 4 hours)
+ *        2 = Half day (< 4 hours) => Even 1 hour is treated as half day
+ *
+ * @returns {Promise<void>}
+ */
 const markEmployeesOut = async () => {
   try {
     const now = new Date();
@@ -344,7 +401,7 @@ const markEmployeesOut = async () => {
   }
 };
 
-const markAllout = new CronJob("29 18 * * *", markEmployeesOut);
+const markAllout = new CronJob("29 19 * * *", markEmployeesOut);
 
 module.exports = {
   markAttendance,

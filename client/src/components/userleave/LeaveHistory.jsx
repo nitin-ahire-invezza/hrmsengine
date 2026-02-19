@@ -417,7 +417,11 @@ const LeaveHistory = () => {
                     : record.totaldays === 1
                     ? "Full"
                     : record.totaldays}{" "}
-                  Day
+                  Day {record.halfday && (
+                        record.halfday_post_lunch
+                          ? "- Second half"
+                          : "- First half"
+                      )}
                 </h3>
                 <p className={getStatusClass(record.applicationstatus)}>
                   {record.applicationstatus === 0

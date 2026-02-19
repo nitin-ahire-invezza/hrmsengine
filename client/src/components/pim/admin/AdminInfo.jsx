@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 import { BiSolidHappyHeartEyes } from "react-icons/bi";
 import { FaFaceSadTear } from "react-icons/fa6";
 
-const AdminInfo = () => {
+const AdminInfo = ({ Id, onBack }) => {
   const { _id } = useParams(); // Get the employee ID from URL params
   const [employee, setEmployee] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -272,13 +272,13 @@ const AdminInfo = () => {
     <div className=" dark:text-white mb-1 lg:mb-0 pb-20 md:pb-32 grid grid-cols-12 gap-2 h-full min-h-full">
       <div className="col-span-12 h-full  lg:col-span-4 flex flex-col gap-2  bg-white dark:bg-neutral-950 p-2 rounded-md">
         <div className="flex gap-2 items-start justify-between ">
-          <Link
-            to="/pim/employeelist"
+          <button
+            onClick={onBack}
             className=" hover:bg-blue-400/20 hover:px-1  duration-300 text-blue-500 rounded group flex items-center"
           >
             <IoCaretBack />
             <h3 className="text-sm">Back</h3>
-          </Link>
+          </button>
           <div>
             {editMode ? (
               <div className="flex gap-2">

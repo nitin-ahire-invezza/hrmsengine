@@ -34,6 +34,7 @@ import AttendanceHistory from "./components/dashboard/AttendanceHistory";
 import Settings from "./components/admin/settings/Settings";
 import LogViewer from "./components/admin/settings/LogViewer";
 import TeamList from "./components/pim/TeamList";
+import { adminRoutes, hrRoutes, managerRoutes, employeeRoutes } from "./routes/roleRoutes";
 
 function App() {
   const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
@@ -79,107 +80,39 @@ function App() {
   //   document.documentElement.classList.add(newTheme);
   // }, []); // This callback function won't cause re-renders
 
-  const renderRoutes = () => {
-    if (userData?.employeeData?.auth === 1) {
-      // Admin accessible routes
-      return (
-        <>
-          <Route index element={<HRDashboard />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/settings/logs" element={<LogViewer />} />
-          <Route path="/Pim" element={<Pim />} />
-          <Route path="/pim/employeelist" element={<Employeelist />} />
-          {/* <Route path="/pim/addemployee" element={<Addemployee />} /> */}
-          <Route
-            path="/pim/employee-details/:_id"
-            element={<EmployeeDetails />}
-          />
-          <Route path="/pim/addholidays" element={<RefillLeaves />} />
-          <Route
-            path="/pim/edit/:empid/:ename/:designation/:jdate/:status"
-            element={<EditEmployee />}
-          />
-          <Route
-            path="/pim/view/:empid/:ename/:designation/:jdate/:status"
-            element={<ViewEmployee />}
-          />
-          <Route path="/clients/viewclient" element={<ViewClient />} />
-          <Route path="/clients/addclient" element={<Addclient />} />
-          <Route path="/projects/addproject" element={<Addproject />} />
-          <Route
-            path="/projects/viewproject/:projectId"
-            element={<ViewProject />}
-          />
-          <Route path="/Attendance" element={<AttendanceHistory />} />
-          <Route path="/chat" element={<ChatBox theme={theme}/>} />
-        </>
-      );
-    } else if (userData?.employeeData?.auth === 2) {
-      // HR accessible routes (auth === 2)
-      return (
-        <>
-          <Route index element={<HRDashboard />} />
-          <Route path="/Pim" element={<Pim />} />
-          <Route path="/pim/employeelist" element={<Employeelist />} />
-          <Route
-            path="/pim/employee-details/:_id"
-            element={<EmployeeDetails />}
-          />
-          <Route path="/pim/addholidays" element={<RefillLeaves />} />
-          <Route
-            path="/pim/view/:empid/:ename/:designation/:jdate/:status"
-            element={<ViewEmployee />}
-          />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/myprofile" element={<UserProfile />} />
-          <Route path="/leave" element={<UserLeave />} />
-          <Route path="/Attendance" element={<AttendanceHistory />} />
-          <Route path="/chat" element={<ChatBox theme={theme}/>} />
-        </>
-      );
-    } else if (userData?.employeeData?.auth === 3) {
-      // Manager accessible routes (auth === 3)
-      return (
-        <>
-          <Route index element={<Dashboard />} />
-          <Route
-            path="/pim/employee-details/:_id"
-            element={<EmployeeDetails />}
-          />
-          <Route path="/viewteam" element={<TeamList />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/clients/viewclient" element={<ViewClient />} />
-          <Route path="/clients/addclient" element={<Addclient />} />
-          <Route path="/projects/addproject" element={<Addproject />} />
-          <Route
-            path="/projects/viewproject/:projectId"
-            element={<ViewProject />}
-          />
-          <Route path="/myprofile" element={<UserProfile />} />
-          <Route path="/timesheet" element={<Timesheet />} />
-          <Route path="/leave" element={<UserLeave />} />
-          <Route path="/Attendance" element={<AttendanceHistory />} />
-          <Route path="/chat" element={<ChatBox theme={theme}/>} />
-        </>
-      );
-    } else {
-      // Employee accessible routes (auth === 0)
-      return (
-        <>
-          <Route index element={<Dashboard />} />
-          <Route path="/myprofile" element={<UserProfile />} />
-          <Route path="/timesheet" element={<Timesheet />} />
-          <Route path="/leave" element={<UserLeave />} />
-          <Route path="/Attendance" element={<AttendanceHistory />} />
-          <Route path="/chat" element={<ChatBox theme={theme}/>} />
-          {/* <Route path="*" element={<NotFound />} /> */}
-        </>
-      );
+  /**
+   * @param routes routes Array of route config objects for the active user role
+   * @returns Array of React router route elements
+   */
+  const renderRouteElements = (routes) =>
+  routes.map((route, index) => {
+    const Component = route.component;
+
+    // Inject theme only where needed
+    const element = route.passTheme
+      ? <Component theme={theme} />
+      : <Component />;
+
+    if (route.index) {
+      return <Route key={index} index element={element} />;
     }
+
+    return <Route key={index} path={route.path} element={element} />;
+  });
+
+
+  const renderRoutes = () => {
+    if (userData?.employeeData?.auth === 1) return renderRouteElements(adminRoutes);
+    if (userData?.employeeData?.auth === 2) return renderRouteElements(hrRoutes);
+    if (userData?.employeeData?.auth === 3) return renderRouteElements(managerRoutes);
+    return renderRouteElements(employeeRoutes);
   };
+  let activeRoutes = [];
+
+  if (userData?.employeeData?.auth === 1) activeRoutes = adminRoutes;
+  else if (userData?.employeeData?.auth === 2) activeRoutes = hrRoutes;
+  else if (userData?.employeeData?.auth === 3) activeRoutes = managerRoutes;
+  else activeRoutes = employeeRoutes;
 
   return (
       <Routes>
@@ -195,7 +128,7 @@ function App() {
           element={
             <ProtectedRoute
               element={() => (
-                <Layout theme={theme} handleThemeSwitch={handleThemeSwitch} />
+                <Layout theme={theme} handleThemeSwitch={handleThemeSwitch} routes={activeRoutes} />
               )}
             />
           }

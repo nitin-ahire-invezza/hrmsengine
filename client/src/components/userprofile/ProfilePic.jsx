@@ -102,6 +102,7 @@ const ProfilePic = () => {
         setTimeout(() => setError(""), 4000);
       }
     } catch (err) {
+      console.log("Error in handleUpload:", err); // Debugging line
       setError(err.message);
       setTimeout(() => setError(""), 4000);
     }

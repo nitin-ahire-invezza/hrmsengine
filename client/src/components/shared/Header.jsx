@@ -5,7 +5,7 @@ import { IoNotifications, IoPerson } from "react-icons/io5";
 import { RiSettingsFill } from "react-icons/ri";
 import { Popover, Transition, Menu } from "@headlessui/react";
 import { Fragment } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, matchRoutes } from "react-router-dom";
 import { DASHBOARD_SIDEBAR_LINKS } from "../../lib/consts/navigation";
 import classNames from "classnames";
 import LogoutMenuItem from "./LogoutMenuItem"; // Import the LogoutMenuItem component
@@ -17,7 +17,7 @@ import { FaCaretDown } from "react-icons/fa6";
 import ApiendPonits from "../../api/APIEndPoints.json";
 import { Tooltip } from "@mui/material";
 
-export default function Header({ handleThemeSwitch, theme }) {
+export default function Header({ handleThemeSwitch, theme, routes=[] }) {
   const { userData } = useContext(AuthContext);
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,31 +72,15 @@ export default function Header({ handleThemeSwitch, theme }) {
     }
   }, [userData]);
 
-  const getTitle = () => {
-    const currentPath = location.pathname;
+   const getTitle = () => {
+    // ensure routes is an array
+    const routeList = Array.isArray(routes) ? routes : [];
 
-    // Search for the current path in the main links array
-    const currentLink = DASHBOARD_SIDEBAR_LINKS.find(
-      (link) => link.path === currentPath
-    );
+    const matches = matchRoutes(routeList, location);
+    if (!matches || matches.length === 0) return "View Employee";
 
-    if (currentLink) {
-      // If current path is found in main links array, return its label
-      return currentLink.label;
-    } else {
-      for (const link of DASHBOARD_SIDEBAR_LINKS) {
-        if (link.subItems) {
-          const subItem = link.subItems.find(
-            (subLink) => subLink.path === currentPath
-          );
-          if (subItem) {
-            return subItem.label; // Return the label of the subItem
-          }
-        }
-      }
-    }
-
-    return "View Employee"; // Return default title if no match is found
+    const lastMatch = matches[matches.length - 1];
+    return lastMatch.route?.meta?.title || "View Employee";
   };
 
   return (

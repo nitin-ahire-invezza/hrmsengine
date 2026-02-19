@@ -151,11 +151,26 @@ const EXCLUDE_ID = "67a9bdd0dec87617f2ff2c9a"; // Admin _id exclude
 //   }
 // };
 /**
- * This function renews leaves on April 1 of every year.
- * Handles probationary employees. Assigns leaves once probation has ended.
- * Sets probation to 6 months. Total leaves never exceeds 18 leaves.
- * @param {Request} req
- * @param {Response} res 
+ * Processes and allocates annual leave balances for all employees.
+ *
+ * Flow:
+ * 1. If run on April 1 → resets entire leave balance collection (new leave cycle).
+ * 2. Otherwise → acts as a probation-completion processor.
+ * 3. For each employee:
+ *    - Calculates probation end date (6 months from joining).
+ *    - Skips employees still under probation.
+ *    - If probation completed and no leave assigned yet:
+ *        • Calculates prorated leaves at 1.5 per month
+ *          until the next March 31 (max 18).
+ *        • Rounds to nearest 0.5.
+ *        • Creates or updates leave balance record.
+ *
+ * Key Rules:
+ * - No leaves during probation.
+ * - Leaves are assigned once after probation completion.
+ * - Annual cycle resets every April 1.
+ *
+ * Intended for scheduled execution (cron job).
  */
 const addLeaves = async (req, res) => {
   try {
@@ -182,7 +197,9 @@ const addLeaves = async (req, res) => {
     };
 
     // Check if today is March 31
+    // TODO (dev) - Change to  below line
     if (currentDate.getDate() === 1 && currentDate.getMonth() === 3) {
+    //if (1) {
       // Delete all documents in the leavebalance collection
       await leavebalance.deleteMany({});
       sendLog("this is 1 april's cron with adding new leaves for all employees", "info")
@@ -873,7 +890,8 @@ const approveLeave = async (req, res) => {
       </div>
     </div>
   </div>`;
-
+  
+// TODO (dev) - Uncomment to enable sending email
     sendMail(
       employeeData.email,
       `Invezza HRMS Portal Leave Application Status`,

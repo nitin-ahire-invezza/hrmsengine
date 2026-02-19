@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useLocation } from "react-router-dom";
 import userprofile from "../../assets/images/clientAvatar.png";
 import ApiendPonits from "../../api/APIEndPoints.json";
@@ -32,6 +32,7 @@ import { FaFaceFrownOpen } from "react-icons/fa6";
 import { BiSolidHappyHeartEyes } from "react-icons/bi";
 import { FaFaceSadTear } from "react-icons/fa6";
 import SelectManager from "./SelectManager";
+import { AuthContext } from "../../contexts/AuthContext";
 
 const GlobalStyles = createGlobalStyle`
 .MuiPaper-root{
@@ -141,6 +142,9 @@ const ViewClient = () => {
     managerId: "",
   });
   const [activeEmployees, setActiveEmployees] = useState([]);
+  const { userData } = useContext(AuthContext);
+  const [activeManagers, setActiveManagers] = useState([]);
+
 
   const selectedclientid = client?._id || client; // Use optional chaining for safety
 
@@ -247,11 +251,29 @@ const ViewClient = () => {
         );
 
         const data = await response.json();
+        const isAdmin = userData?.employeeData?.auth === 1;
+        const userId = userData?.employeeData?._id;
 
         if (response.ok) {
-          const activeProjects = (data.data || []).filter(
-            (project) => !project.isdeleted
-          );
+          // Displaying only those projects which are created by only current manager.
+          const activeProjects = (data.data || [])
+            .filter((project) => !project.isdeleted)
+            .filter((project) => isAdmin || project.managerId === userId)
+            .map((project) => {
+              // Check if managerId already exists in assignto array
+              const isManagerAlreadyInAssignto = (project.assignto || []).some(
+                (assignee) => assignee._id === project.managerId
+              );
+              
+              return {
+                ...project,
+                assignto: isManagerAlreadyInAssignto
+                  ? [...(project.assignto || [])] 
+                  : [...(project.assignto || []), userData?.employeeData],  // Add full manager object
+              };
+            });
+
+          //return;
           setProjects(activeProjects); // Set the projects data
         } else {
           console.error(
@@ -265,7 +287,7 @@ const ViewClient = () => {
     };
 
     viewProjects();
-  }, [token, selectedclientid]);
+  }, [token, selectedclientid, projects.length]);
 
   const handleEditToggle = () => setIsEditing(!isEditing);
 
@@ -336,14 +358,14 @@ const ViewClient = () => {
       setTimeout(() => setError(null), 3500);
       return;
     }
-    //console.log("Before process Adding project with data:", { ...projectForm, clientid: selectedclientid });
-    // Check if managerId is present in assignTo. If not, add it else proceed.
-    if (!projectForm.assignto.includes(projectForm.managerId)) {
-      setProjectForm((prev) => ({
-        ...prev,
-        assignto: [...prev.assignto, prev.managerId],
-      }));
-    }
+
+    const payload = {
+      ...projectForm,
+      assignto: Array.from(
+        new Set([...projectForm.assignto, projectForm.managerId])
+      ),
+      clientid: selectedclientid
+    };
     //console.log("After process Adding project with data:", { ...projectForm, clientid: selectedclientid });
     try {
       const response = await fetch(
@@ -354,10 +376,7 @@ const ViewClient = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            ...projectForm,
-            clientid: selectedclientid,
-          }),
+          body: JSON.stringify(payload),
         }
       );
 
@@ -396,7 +415,11 @@ const ViewClient = () => {
         const activeEmployees = data.data.filter(
           (employee) => employee.status === 1
         );
+        const activeManagers = data.data.filter(
+          (employee) => employee.auth === 3
+        );
         setActiveEmployees(activeEmployees);
+        setActiveManagers(activeManagers);
       } else {
         console.error(
           "Error in Response:",
@@ -1033,7 +1056,7 @@ const ViewClient = () => {
             />
 
             <SelectManager
-              options={activeEmployees}
+              options={activeManagers}
               projectForm={projectForm}
               setProjectForm={setProjectForm}
             />
